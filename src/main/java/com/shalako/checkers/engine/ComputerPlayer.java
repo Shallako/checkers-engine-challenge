@@ -1,0 +1,71 @@
+package com.shalako.checkers.engine;
+
+import com.shalako.checkers.model.*;
+
+import java.util.*;
+
+/**
+ * Implements the computer player logic for the checkers game.
+ */
+public class ComputerPlayer {
+    private final MoveValidator moveValidator;
+    private final Random random;
+
+    public ComputerPlayer() {
+        this.moveValidator = new MoveValidator();
+        this.random = new Random();
+    }
+
+    /**
+     * Selects a move for the computer player.
+     * Returns null if no valid moves are available.
+     */
+    public Move selectMove(Game game) {
+        PlayerColor computerColor = game.getCurrentTurn();
+        Board board = game.getBoard();
+        
+        // Get all pieces of the computer's color
+        List<Position> computerPieces = new ArrayList<>();
+        for (Map.Entry<Position, Piece> entry : board.getPieces().entrySet()) {
+            if (entry.getValue().getColor() == computerColor) {
+                computerPieces.add(entry.getKey());
+            }
+        }
+        
+        // Collect all valid moves
+        List<Move> allValidMoves = new ArrayList<>();
+        for (Position position : computerPieces) {
+            allValidMoves.addAll(moveValidator.getValidMoves(board, position));
+        }
+        
+        if (allValidMoves.isEmpty()) {
+            return null;
+        }
+        
+        // Prioritize moves: jumps > promotions > regular moves
+        List<Move> jumpMoves = new ArrayList<>();
+        List<Move> promotionMoves = new ArrayList<>();
+        List<Move> regularMoves = new ArrayList<>();
+        
+        for (Move move : allValidMoves) {
+            if (move.isJump()) {
+                jumpMoves.add(move);
+            } else if (move.isPromotion()) {
+                promotionMoves.add(move);
+            } else {
+                regularMoves.add(move);
+            }
+        }
+        
+        // Select the best move based on priority
+        if (!jumpMoves.isEmpty()) {
+            // Prioritize multi-jumps by the number of captures
+            jumpMoves.sort(Comparator.comparing(move -> -move.getCapturedPieces().size()));
+            return jumpMoves.get(0);
+        } else if (!promotionMoves.isEmpty()) {
+            return promotionMoves.get(random.nextInt(promotionMoves.size()));
+        } else {
+            return regularMoves.get(random.nextInt(regularMoves.size()));
+        }
+    }
+}
