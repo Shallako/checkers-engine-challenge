@@ -1,5 +1,7 @@
 package com.shalako.checkers.model;
 
+import lombok.Getter;
+
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
@@ -7,6 +9,7 @@ import java.util.UUID;
 /**
  * Represents a checkers game.
  */
+@Getter
 public class Game {
     private final String id;
     private final Board board;
@@ -27,38 +30,6 @@ public class Game {
         this.state = state;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public Board getBoard() {
-        return board;
-    }
-
-    public Player getRedPlayer() {
-        return redPlayer;
-    }
-
-    public Player getBlackPlayer() {
-        return blackPlayer;
-    }
-
-    public PlayerColor getCurrentTurn() {
-        return currentTurn;
-    }
-
-    public GameState getState() {
-        return state;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
     }
 
     /**

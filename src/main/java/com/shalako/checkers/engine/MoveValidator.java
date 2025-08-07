@@ -1,6 +1,7 @@
 package com.shalako.checkers.engine;
 
 import com.shalako.checkers.model.*;
+import com.shalako.checkers.model.PlayerType;
 
 import java.util.*;
 
@@ -16,6 +17,16 @@ public class MoveValidator {
         Board board = game.getBoard();
         Position from = moveRequest.getFrom();
         Position to = moveRequest.getTo();
+        
+        // Special case for computer moves (indicated by null positions)
+        if (from == null || to == null) {
+            if (game.getCurrentPlayer().getType() != PlayerType.COMPUTER) {
+                throw new IllegalArgumentException("Cannot make a computer move for a human player");
+            }
+            
+            // For computer moves, we'll let the ComputerPlayer select a move
+            return null;
+        }
         
         // Check if positions are valid
         if (!from.isValidForBoard(board.getSize()) || !to.isValidForBoard(board.getSize())) {

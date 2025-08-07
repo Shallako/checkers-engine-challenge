@@ -5,7 +5,9 @@ package com.shalako.checkers.model;
  */
 public enum BoardSize {
     EIGHT_BY_EIGHT(8, 8, 3),
-    TEN_BY_TEN(10, 10, 4);
+    STANDARD(8, 8, 3),
+    TEN_BY_TEN(10, 10, 4),
+    INTERNATIONAL(10, 10, 4);
 
     private final int rows;
     private final int columns;

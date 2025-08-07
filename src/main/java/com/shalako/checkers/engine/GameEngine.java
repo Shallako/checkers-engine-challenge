@@ -57,6 +57,11 @@ public class GameEngine {
         // Validate the move
         Move move = moveValidator.validateMove(game, moveRequest);
         
+        // For computer moves, the validator returns null and we let the ComputerPlayer select a move
+        if (move == null) {
+            return makeComputerMove(game);
+        }
+        
         // Execute the move
         Game updatedGame = executeMove(game, move);
         

@@ -1,5 +1,7 @@
 package com.shalako.checkers.model;
 
+import lombok.Getter;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -8,16 +10,13 @@ import java.util.Objects;
  * Represents a checkers board.
  */
 public class Board {
+    @Getter
     private final BoardSize size;
     private final Map<Position, Piece> pieces;
 
     private Board(BoardSize size, Map<Position, Piece> pieces) {
         this.size = size;
         this.pieces = new HashMap<>(pieces);
-    }
-
-    public BoardSize getSize() {
-        return size;
     }
 
     /**
@@ -72,9 +71,9 @@ public class Board {
                 if (piece != null) {
                     sb.append(piece.getDisplaySymbol());
                 } else {
-                    // Checkerboard pattern for empty squares
+                    // Checkerboard pattern for empty squares (white and grey)
                     boolean isDarkSquare = (row + col) % 2 == 1;
-                    sb.append(isDarkSquare ? " . " : "   ");
+                    sb.append(isDarkSquare ? " # " : "   ");
                 }
             }
             

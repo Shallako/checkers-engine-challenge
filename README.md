@@ -18,8 +18,8 @@ A Java-based Checkers game engine that allows a human player to play against a c
 ## Requirements
 
 - Java 17 or higher
-- Redis server running on localhost:6379 (see [Redis Setup](#redis-setup))
 - Gradle for building the project
+- Redis server (optional - embedded Redis server included, see [Redis Setup](#redis-setup))
 
 ## Building the Project
 
@@ -32,6 +32,54 @@ A Java-based Checkers game engine that allows a human player to play against a c
 ```bash
 ./gradlew run
 ```
+
+## RESTful API
+
+The application also provides a RESTful API for playing the game. The API supports the standard HTTP methods: GET, POST, PUT, and DELETE.
+
+### Endpoints
+
+- `POST /api/games` - Create a new game
+  - Request body: `{ "playerName": "string", "boardSize": "EIGHT_BY_EIGHT|TEN_BY_TEN", "playerColor": "RED|BLACK" }`
+  - Response: Game state including board, players, and current turn
+
+- `GET /api/games/{gameId}` - Get game state
+  - Response: Complete game state
+
+- `GET /api/games/{gameId}/board` - Get a human-readable display of the game board
+  - Response: Board display in ASCII format
+
+- `POST /api/games/{gameId}/moves` - Make a move
+  - Request body: `{ "gameId": "string", "playerId": "string", "from": {"row": number, "column": number}, "to": {"row": number, "column": number} }`
+  - Response: Updated game state
+
+### Example Usage
+
+1. Create a new game:
+   ```
+   POST /api/games
+   {
+     "playerName": "Player1",
+     "boardSize": "EIGHT_BY_EIGHT",
+     "playerColor": "RED"
+   }
+   ```
+
+2. View the board:
+   ```
+   GET /api/games/{gameId}/board
+   ```
+
+3. Make a move:
+   ```
+   POST /api/games/{gameId}/moves
+   {
+     "gameId": "{gameId}",
+     "playerId": "{playerId}",
+     "from": {"row": 5, "column": 0},
+     "to": {"row": 4, "column": 1}
+   }
+   ```
 
 ## How to Play
 
@@ -69,7 +117,11 @@ The game follows standard Checkers rules:
 - `model`: Contains the domain model classes (Board, Piece, Player, etc.)
 - `engine`: Contains the game logic (GameEngine, MoveValidator, ComputerPlayer)
 - `persistence`: Contains the Redis-based persistence layer
+- `api`: Contains the RESTful API components
+  - `controller`: REST controllers that handle HTTP requests
+  - `dto`: Data Transfer Objects for API requests and responses
 - `CheckersApp`: Main application class with the text-based interface
+- `CheckersRestApplication`: Main application class for the RESTful API
 
 ## Redis Data Model
 

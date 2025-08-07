@@ -1,5 +1,7 @@
 package com.shalako.checkers.model;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -8,6 +10,7 @@ import java.util.Objects;
 /**
  * Represents a move in a checkers game.
  */
+@Getter
 public class Move {
     private final Position from;
     private final Position to;
@@ -21,22 +24,6 @@ public class Move {
             capturedPieces != null ? new ArrayList<>(capturedPieces) : Collections.emptyList()
         );
         this.promotion = promotion;
-    }
-
-    public Position getFrom() {
-        return from;
-    }
-
-    public Position getTo() {
-        return to;
-    }
-
-    public List<Position> getCapturedPieces() {
-        return capturedPieces;
-    }
-
-    public boolean isPromotion() {
-        return promotion;
     }
 
     public boolean isJump() {

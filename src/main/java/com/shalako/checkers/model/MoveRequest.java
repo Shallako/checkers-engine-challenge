@@ -1,11 +1,14 @@
 package com.shalako.checkers.model;
 
+import lombok.Getter;
+
 import java.util.Objects;
 
 /**
  * Represents a request to make a move in a checkers game.
  * This is used as a method input object to avoid having too many parameters.
  */
+@Getter
 public class MoveRequest {
     private final String gameId;
     private final String playerId;
@@ -17,22 +20,6 @@ public class MoveRequest {
         this.playerId = playerId;
         this.from = from;
         this.to = to;
-    }
-
-    public String getGameId() {
-        return gameId;
-    }
-
-    public String getPlayerId() {
-        return playerId;
-    }
-
-    public Position getFrom() {
-        return from;
-    }
-
-    public Position getTo() {
-        return to;
     }
 
     @Override
