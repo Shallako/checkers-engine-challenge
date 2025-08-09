@@ -95,7 +95,10 @@ public class GameEngine {
         
         // For computer moves, the validator returns null and we let the ComputerPlayer select a move
         if (move == null) {
-            return makeComputerMove(game);
+            // Computer move: compute and persist
+            Game computerUpdated = makeComputerMove(game);
+            gameRepository.saveGame(computerUpdated);
+            return computerUpdated;
         }
         
         // Log human move before execution
@@ -115,6 +118,8 @@ public class GameEngine {
             updatedGame = makeComputerMove(updatedGame);
         }
         
+        // Persist the latest updated state (after human move and optional computer reply)
+        gameRepository.saveGame(updatedGame);
         return updatedGame;
     }
 
