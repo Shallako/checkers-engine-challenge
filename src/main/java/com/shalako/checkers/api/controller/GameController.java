@@ -24,7 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * REST controller for Checkers game operations.
  */
-@CrossOrigin(origins = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
+@CrossOrigin(origins = {"http://localhost:3000"}, allowCredentials = "true", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
 @RestController
 @RequestMapping("/games")
 public class GameController {
