@@ -1,12 +1,20 @@
 package com.shalako.checkers.api.dto;
 
-import com.shalako.checkers.model.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.shalako.checkers.enums.BoardSize;
+import com.shalako.checkers.enums.GameState;
+import com.shalako.checkers.enums.PieceType;
+import com.shalako.checkers.enums.PlayerColor;
+import com.shalako.checkers.enums.PlayerType;
+import com.shalako.checkers.model.Board;
+import com.shalako.checkers.model.Game;
+import com.shalako.checkers.model.Piece;
+import com.shalako.checkers.model.Player;
 
 import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * DTO for game state in API responses.

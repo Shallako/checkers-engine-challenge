@@ -1,10 +1,13 @@
 package com.shalako.checkers.model;
 
-import lombok.Getter;
+import com.shalako.checkers.enums.BoardSize;
+import com.shalako.checkers.enums.GameState;
+import com.shalako.checkers.enums.PlayerColor;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.Getter;
 
 /**
  * Represents a checkers game.

@@ -1,11 +1,17 @@
 package com.shalako.checkers.api.controller;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import com.shalako.checkers.api.dto.BoardDisplayDto;
 import com.shalako.checkers.api.dto.GameResponseDto;
 import com.shalako.checkers.api.dto.MoveRequestDto;
 import com.shalako.checkers.api.dto.NewGameRequest;
 import com.shalako.checkers.engine.GameEngine;
-import com.shalako.checkers.model.*;
+import com.shalako.checkers.enums.BoardSize;
+import com.shalako.checkers.enums.PlayerColor;
+import com.shalako.checkers.model.Game;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,8 +19,6 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class GameControllerTest {

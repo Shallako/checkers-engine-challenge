@@ -1,8 +1,16 @@
 package com.shalako.checkers.engine;
 
-import com.shalako.checkers.model.*;
-
-import java.util.*;
+import com.shalako.checkers.enums.PlayerColor;
+import com.shalako.checkers.model.Board;
+import com.shalako.checkers.model.Game;
+import com.shalako.checkers.model.Move;
+import com.shalako.checkers.model.Piece;
+import com.shalako.checkers.model.Position;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 /**
  * Implements the computer player logic for the checkers game.

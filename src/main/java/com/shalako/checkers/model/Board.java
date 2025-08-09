@@ -1,10 +1,12 @@
 package com.shalako.checkers.model;
 
-import lombok.Getter;
+import com.shalako.checkers.enums.BoardSize;
+import com.shalako.checkers.enums.PlayerColor;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import lombok.Getter;
 
 /**
  * Represents a checkers board.
@@ -116,15 +118,25 @@ public class Board {
 
         /**
          * Creates a new board with the standard initial setup.
+         * Leaves empty rows in the middle to allow for movement.
          */
         public static Board createStandardBoard(BoardSize size) {
             Map<Position, Piece> pieces = new HashMap<>();
             
-            // Place black pieces at the top
+            // Calculate the number of empty rows to leave in the middle
+            // For an 8x8 board with 3 initial rows, we want 2 empty rows (rows 3, 4)
+            int emptyRows = size.getRows() - (2 * size.getInitialRows());
+            if (emptyRows < 2) {
+                emptyRows = 2; // Ensure at least 2 empty rows
+            }
+            
+            // Place black pieces at the top (rows 0, 1, 2 for an 8x8 board)
             placePieces(pieces, 0, size.getInitialRows(), PlayerColor.BLACK, size);
             
-            // Place red pieces at the bottom
-            placePieces(pieces, size.getRows() - size.getInitialRows(), size.getRows(), PlayerColor.RED, size);
+            // Place red pieces at the bottom, leaving empty rows in the middle
+            // For an 8x8 board: rows 5, 6, 7 (leaving rows 3, 4 empty)
+            int redStartRow = size.getInitialRows() + emptyRows;
+            placePieces(pieces, redStartRow, redStartRow + size.getInitialRows(), PlayerColor.RED, size);
             
             return new Board(size, pieces);
         }

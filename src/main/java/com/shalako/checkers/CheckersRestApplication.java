@@ -4,6 +4,8 @@ import com.shalako.checkers.engine.GameEngine;
 import com.shalako.checkers.persistence.GameRepository;
 import com.shalako.checkers.persistence.RedisGameRepository;
 import com.shalako.checkers.util.EmbeddedRedisServer;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,9 +16,6 @@ import org.springframework.context.annotation.Bean;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
-
 /**
  * Main Spring Boot application class for the Checkers REST API.
  */
@@ -24,6 +23,18 @@ import jakarta.annotation.PreDestroy;
 public class CheckersRestApplication {
 
   private static final Logger logger = LoggerFactory.getLogger(CheckersRestApplication.class);
+
+  // Constants to avoid magic numbers/strings
+  private static final String LOCALHOST_IP = "127.0.0.1";
+  private static final String LOCALHOST_NAME = "localhost";
+  private static final String REDIS_PONG = "PONG";
+  private static final int JEDIS_CONNECT_TIMEOUT_MS = 5000;
+
+  private static final int POOL_MAX_TOTAL = 10;
+  private static final int POOL_MAX_IDLE = 5;
+  private static final int POOL_MIN_IDLE = 1;
+  private static final int POOL_MAX_WAIT_MS = 10000;
+  private static final boolean POOL_JMX_ENABLED = false;
 
   @Value("${redis.external.enabled:false}")
   private boolean externalRedisEnabled;
@@ -58,15 +69,15 @@ public class CheckersRestApplication {
       logger.info("External Redis server enabled, checking if available at {}:{}", redisHost, redisPort);
 
       // Check if external Redis server is available
-
       boolean externalRedisAvailable = false;
 
-      if (redisHost.equals("127.0.0.1") || redisHost.equals("localhost")) {
+      if (redisHost.equals(LOCALHOST_IP) || redisHost.equals(LOCALHOST_NAME)) {
         externalRedisAvailable = EmbeddedRedisServer.checkExternalRedisServer(redisPort);
       } else {
-        try (redis.clients.jedis.Jedis jedis = new redis.clients.jedis.Jedis(redisHost, redisPort, 5000)) {
+        try (redis.clients.jedis.Jedis jedis =
+            new redis.clients.jedis.Jedis(redisHost, redisPort, JEDIS_CONNECT_TIMEOUT_MS)) {
           String pong = jedis.ping();
-          externalRedisAvailable = "PONG".equalsIgnoreCase(pong);
+          externalRedisAvailable = REDIS_PONG.equalsIgnoreCase(pong);
         } catch (Exception e) {
           logger.warn("Failed to connect to external Redis server:[{}].", e.getMessage());
         }
@@ -107,11 +118,11 @@ public class CheckersRestApplication {
   @Bean
   public JedisPool jedisPool() {
     JedisPoolConfig poolConfig = new JedisPoolConfig();
-    poolConfig.setMaxTotal(10);
-    poolConfig.setMaxIdle(5);
-    poolConfig.setMinIdle(1);
-    poolConfig.setMaxWait(java.time.Duration.ofMillis(10000)); // Set positive maxWait value
-    poolConfig.setJmxEnabled(false); // Disable JMX to avoid MBean registration issues
+    poolConfig.setMaxTotal(POOL_MAX_TOTAL);
+    poolConfig.setMaxIdle(POOL_MAX_IDLE);
+    poolConfig.setMinIdle(POOL_MIN_IDLE);
+    poolConfig.setMaxWait(java.time.Duration.ofMillis(POOL_MAX_WAIT_MS)); // Set positive maxWait value
+    poolConfig.setJmxEnabled(POOL_JMX_ENABLED); // Disable JMX to avoid MBean registration issues
 
     String host;
     int port;
@@ -123,7 +134,7 @@ public class CheckersRestApplication {
       logger.info("Configuring JedisPool to connect to external Redis at {}:{}", host, port);
     } else {
       // Use embedded Redis server
-      host = "127.0.0.1";
+      host = LOCALHOST_IP;
       port = EmbeddedRedisServer.getCurrentPort();
       logger.info("Configuring JedisPool to connect to embedded Redis at {}:{}", host, port);
     }

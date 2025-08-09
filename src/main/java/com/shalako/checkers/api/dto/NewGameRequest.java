@@ -1,7 +1,7 @@
 package com.shalako.checkers.api.dto;
 
-import com.shalako.checkers.model.BoardSize;
-import com.shalako.checkers.model.PlayerColor;
+import com.shalako.checkers.enums.BoardSize;
+import com.shalako.checkers.enums.PlayerColor;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -15,12 +15,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class NewGameRequest {
-    @NotBlank(message = "Player name is required")
-    private String playerName;
-    
-    @NotNull(message = "Board size is required")
-    private BoardSize boardSize;
-    
-    @NotNull(message = "Player color is required")
-    private PlayerColor playerColor;
+
+  @NotBlank(message = "Player name is required")
+  private String playerName;
+
+  @NotNull(message = "Board size is required")
+  private BoardSize boardSize;
+
+  @NotNull(message = "Player color is required")
+  private PlayerColor playerColor;
 }

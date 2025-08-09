@@ -1,5 +1,7 @@
 package com.shalako.checkers.model;
 
+import com.shalako.checkers.enums.PieceType;
+import com.shalako.checkers.enums.PlayerColor;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Value;

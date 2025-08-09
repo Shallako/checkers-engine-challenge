@@ -1,4 +1,4 @@
-package com.shalako.checkers.model;
+package com.shalako.checkers.enums;
 
 /**
  * Represents the type of a checkers piece.

@@ -123,38 +123,38 @@ The application now includes an enhanced embedded Redis server implementation:
 
 2. The `EmbeddedRedisServer` utility class manages the server with improved reliability:
    ```java
-   package com.shalako.checkers.util;
+package com.shalako.checkers.util;
 
-   import org.slf4j.Logger;
-   import org.slf4j.LoggerFactory;
-   import redis.embedded.RedisServer;
-   import java.io.IOException;
-   import java.net.ServerSocket;
-   import java.util.Arrays;
-   import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import redis.embedded.RedisServer;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.util.Arrays;
+import java.util.List;
 
-   public class EmbeddedRedisServer {
-       private static final Logger logger = LoggerFactory.getLogger(EmbeddedRedisServer.class);
-       private static RedisServer redisServer;
-       private static final int DEFAULT_PORT = 6379;
-       private static final List<Integer> FALLBACK_PORTS = Arrays.asList(6380, 6381, 6382);
-       private static int currentPort = DEFAULT_PORT;
+public class EmbeddedRedisServer {
+    private static final Logger logger = LoggerFactory.getLogger(EmbeddedRedisServer.class);
+    private static RedisServer redisServer;
+    private static final int DEFAULT_PORT = 6379;
+    private static final List<Integer> FALLBACK_PORTS = Arrays.asList(6380, 6381, 6382);
+    private static final int currentPort = DEFAULT_PORT;
 
-       public static void start() {
-           // Tries multiple ports if the default port is unavailable
-           // Provides detailed system information and troubleshooting tips
-       }
+    public static void start() {
+        // Tries multiple ports if the default port is unavailable
+        // Provides detailed system information and troubleshooting tips
+    }
 
-       public static int getCurrentPort() {
-           // Returns the port that Redis is actually using
-           return currentPort;
-       }
+    public static int getCurrentPort() {
+        // Returns the port that Redis is actually using
+        return currentPort;
+    }
 
-       public static void stop() {
-           // Stop the embedded Redis server
-       }
-   }
-   ```
+    public static void stop() {
+        // Stop the embedded Redis server
+    }
+}
+```
 
 3. The `CheckersRestApplication` now intelligently manages the Redis server:
    ```java

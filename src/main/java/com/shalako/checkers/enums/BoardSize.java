@@ -1,4 +1,4 @@
-package com.shalako.checkers.model;
+package com.shalako.checkers.enums;
 
 /**
  * Represents the size of a checkers board.

@@ -1,10 +1,20 @@
 package com.shalako.checkers.engine;
 
-import com.shalako.checkers.model.*;
+import com.shalako.checkers.enums.BoardSize;
+import com.shalako.checkers.enums.GameState;
+import com.shalako.checkers.enums.PlayerColor;
+import com.shalako.checkers.enums.PlayerType;
+import com.shalako.checkers.model.Board;
+import com.shalako.checkers.model.Game;
+import com.shalako.checkers.model.Move;
+import com.shalako.checkers.model.MoveRequest;
+import com.shalako.checkers.model.Piece;
+import com.shalako.checkers.model.Player;
+import com.shalako.checkers.model.Position;
 import com.shalako.checkers.persistence.GameRepository;
-
 import java.time.Instant;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The main engine for the checkers game.
@@ -23,9 +33,27 @@ public class GameEngine {
 
     /**
      * Creates a new game with the specified parameters.
+     * Ensures that the game is in the IN_PROGRESS state.
      */
     public Game createGame(BoardSize boardSize, String playerName, PlayerColor playerColor) {
+        // Create a new game
         Game game = Game.GameFactory.createHumanVsComputerGame(boardSize, playerName, playerColor);
+        
+        // Ensure the game is in the IN_PROGRESS state
+        if (game.isGameOver()) {
+            // If the game is over (which shouldn't happen for a new game), create a new game with the IN_PROGRESS state
+            game = Game.GameFactory.createGame(
+                game.getId(),
+                game.getBoard(),
+                game.getRedPlayer(),
+                game.getBlackPlayer(),
+                game.getCurrentTurn(),
+                GameState.IN_PROGRESS,
+                game.getCreatedAt(),
+                game.getUpdatedAt()
+            );
+        }
+        
         return gameRepository.saveGame(game);
     }
 

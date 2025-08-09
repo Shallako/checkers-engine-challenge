@@ -1,13 +1,18 @@
 package com.shalako.checkers;
 
 import com.shalako.checkers.engine.GameEngine;
-import com.shalako.checkers.model.*;
+import com.shalako.checkers.enums.BoardSize;
+import com.shalako.checkers.enums.PlayerColor;
+import com.shalako.checkers.enums.PlayerType;
+import com.shalako.checkers.model.Game;
+import com.shalako.checkers.model.MoveRequest;
+import com.shalako.checkers.model.Player;
+import com.shalako.checkers.model.Position;
 import com.shalako.checkers.persistence.GameRepository;
 import com.shalako.checkers.persistence.RedisGameRepository;
+import java.util.Scanner;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
-
-import java.util.Scanner;
 
 /**
  * Main application class for the Checkers game.

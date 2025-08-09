@@ -1,12 +1,13 @@
 package com.shalako.checkers.model;
 
+import com.shalako.checkers.enums.PlayerColor;
+import com.shalako.checkers.enums.PlayerType;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import lombok.Value;
-
-import java.util.UUID;
 
 /**
  * Represents a player in a checkers game.

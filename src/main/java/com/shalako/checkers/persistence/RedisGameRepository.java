@@ -1,11 +1,23 @@
 package com.shalako.checkers.persistence;
 
-import com.shalako.checkers.model.*;
+import com.shalako.checkers.enums.BoardSize;
+import com.shalako.checkers.enums.GameState;
+import com.shalako.checkers.enums.PieceType;
+import com.shalako.checkers.enums.PlayerColor;
+import com.shalako.checkers.enums.PlayerType;
+import com.shalako.checkers.model.Board;
+import com.shalako.checkers.model.Game;
+import com.shalako.checkers.model.Piece;
+import com.shalako.checkers.model.Player;
+import com.shalako.checkers.model.Position;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
-
-import java.time.Instant;
-import java.util.*;
 
 /**
  * Redis implementation of the GameRepository interface.
@@ -156,7 +168,7 @@ public class RedisGameRepository implements GameRepository {
             Position pos = entry.getKey();
             Piece piece = entry.getValue();
             
-            String posKey = pos.getRow() + ":" + pos.getColumn();
+            String posKey = pos.row() + ":" + pos.column();
             String pieceValue = piece.getColor().name() + ":" + piece.getType().name();
             
             jedis.hset(boardKey, posKey, pieceValue);

@@ -1,7 +1,7 @@
 package com.shalako.checkers.api.dto;
 
+import com.shalako.checkers.enums.BoardSize;
 import com.shalako.checkers.model.Board;
-import com.shalako.checkers.model.BoardSize;
 import lombok.Data;
 
 /**
