@@ -107,8 +107,9 @@ public class CheckersApp {
             MoveRequest dummyRequest = MoveRequest.MoveRequestFactory.createMoveRequest(
                 currentGame.getId(), 
                 currentGame.getCurrentPlayer().getId(),
-                new Position(0, 0),
-                new Position(0, 0)
+                null,
+                null,
+                PlayerType.COMPUTER
             );
             currentGame = gameEngine.makeMove(dummyRequest);
         }
@@ -143,8 +144,9 @@ public class CheckersApp {
             MoveRequest dummyRequest = MoveRequest.MoveRequestFactory.createMoveRequest(
                 currentGame.getId(), 
                 currentPlayer.getId(),
-                new Position(0, 0),
-                new Position(0, 0)
+                null,
+                null,
+                PlayerType.COMPUTER
             );
             
             try {

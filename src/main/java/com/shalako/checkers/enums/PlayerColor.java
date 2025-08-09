@@ -4,8 +4,8 @@ package com.shalako.checkers.enums;
  * Represents the color of a player in a checkers game.
  */
 public enum PlayerColor {
-    RED("R", 1),
-    BLACK("B", -1);
+    RED("R", -1),
+    BLACK("B", 1);
 
     private final String symbol;
     private final int direction;

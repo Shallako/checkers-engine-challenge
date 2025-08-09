@@ -51,7 +51,8 @@ public class GameController {
                     game.getId(),
                     game.getCurrentPlayer().getId(),
                     null,
-                    null
+                    null,
+                    PlayerType.COMPUTER
             );
             game = gameEngine.makeMove(dummyRequest);
         }
@@ -120,7 +121,8 @@ public class GameController {
                         moveRequestDto.getGameId(),
                         moveRequestDto.getPlayerId(),
                         null,
-                        null
+                        null,
+                        PlayerType.COMPUTER
                 );
                 
                 Game updatedGame = gameEngine.makeMove(moveRequest);

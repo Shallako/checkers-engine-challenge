@@ -19,48 +19,64 @@ import java.util.Map;
  * Validates moves in a checkers game.
  */
 public class MoveValidator {
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(MoveValidator.class);
 
   /**
    * Validates a move request and returns a valid Move object.
    */
   public Move validateMove(Game game, MoveRequest moveRequest) {
+      LOG.info("[VALIDATE MOVE REQUEST] gameId={}, playerId={}, playerType={}, from={}, to={}, currentTurn={}",
+              moveRequest.getGameId(), moveRequest.getPlayerId(), moveRequest.getPlayerType(),
+              moveRequest.getFrom(), moveRequest.getTo(), game.getCurrentTurn());
     Board board = game.getBoard();
     Position from = moveRequest.getFrom();
     Position to = moveRequest.getTo();
 
-    // Special case for computer moves (indicated by null positions)
-    if (from == null || to == null) {
+    // Determine move flow based on player type in the request
+    if (moveRequest.getPlayerType() == PlayerType.COMPUTER) {
       if (game.getCurrentPlayer().getType() != PlayerType.COMPUTER) {
+        LOG.warn("[VALIDATION FAILED] Computer move requested but current player is not computer: currentPlayerType={}", game.getCurrentPlayer().getType());
         throw new IllegalArgumentException("Cannot make a computer move for a human player");
       }
-
       // For computer moves, we'll let the ComputerPlayer select a move
+      LOG.debug("[VALIDATION PASSED] Computer move request accepted for gameId={}", game.getId());
       return null;
+    }
+
+    // From here on, treat as a human move and require valid positions
+    if (from == null || to == null) {
+      LOG.warn("[VALIDATION FAILED] Missing positions for human move: from={}, to={}", from, to);
+      throw new IllegalArgumentException("From and To positions are required for a human move");
     }
 
     // Check if positions are valid
     if (!from.isValidForBoard(board.getSize()) || !to.isValidForBoard(board.getSize())) {
+      LOG.warn("[VALIDATION FAILED] Invalid board positions: fromValid={}, toValid={}, boardSize={}", from.isValidForBoard(board.getSize()), to.isValidForBoard(board.getSize()), board.getSize());
       throw new IllegalArgumentException("Invalid position");
     }
 
     // Check if there is a piece at the from position
     Piece piece = board.getPieceAt(from);
     if (piece == null) {
+      LOG.warn("[VALIDATION FAILED] No piece at from position: {}", from);
       throw new IllegalArgumentException("No piece at position: " + from);
     }
 
     // Check if the piece belongs to the current player
     if (piece.getColor() != game.getCurrentTurn()) {
+      LOG.warn("[VALIDATION FAILED] Attempt to move opponent piece: pieceColor={}, currentTurn={}", piece.getColor(), game.getCurrentTurn());
       throw new IllegalArgumentException("Cannot move opponent's piece");
     }
 
     // Check if the destination is empty
     if (!board.isEmpty(to)) {
+      LOG.warn("[VALIDATION FAILED] Destination not empty: {}", to);
       throw new IllegalArgumentException("Destination is not empty: " + to);
     }
 
     // Check if the move is diagonal
     if (!isDiagonalMove(from, to)) {
+      LOG.warn("[VALIDATION FAILED] Move not diagonal: from={}, to={}", from, to);
       throw new IllegalArgumentException("Move must be diagonal");
     }
 
@@ -74,20 +90,24 @@ public class MoveValidator {
     if (jumpMovesAvailable) {
       for (Move move : validMoves) {
         if (move.isJump() && move.getTo().equals(to)) {
+          LOG.debug("[VALIDATION PASSED] Jump move selected: {} -> {}", from, to);
           return move;
         }
       }
+      LOG.warn("[VALIDATION FAILED] Jump required but attempted non-jump: from={}, to={}", from, to);
       throw new IllegalArgumentException("Jump move is mandatory when available");
     } else {
       // If no jump moves are available, allow any valid move
       for (Move move : validMoves) {
         if (move.getTo().equals(to)) {
+          LOG.debug("[VALIDATION PASSED] Simple move selected: {} -> {}", from, to);
           return move;
         }
       }
     }
 
-    throw new IllegalArgumentException("Invalid move");
+    LOG.warn("[VALIDATION FAILED] Invalid move for piece at {} to {}", from, to);
+        throw new IllegalArgumentException("Invalid move");
   }
 
   /**
@@ -173,11 +193,11 @@ public class MoveValidator {
     // Determine the directions the piece can move
     List<int[]> directions = getMovementDirections(piece);
 
-    System.out.println("\n\nDEBUG: Getting simple moves for " + piece.getColor() + " " + piece.getType() + " at " + position);
-    System.out.println("DEBUG: Movement directions: " + directions.size());
+    LOG.debug("Getting simple moves for {} {} at {}", piece.getColor(), piece.getType(), position);
+    LOG.debug("Movement directions: {}", directions.size());
 
     for (int[] dir : directions) {
-      System.out.println("DEBUG: Checking direction [" + dir[0] + ", " + dir[1] + "]");
+      LOG.debug("Checking direction [{}, {}]", dir[0], dir[1]);
 
       if (piece.getType() == PieceType.KING) {
         // For kings in international checkers (Flying Kings), they can move any number of squares diagonally
@@ -185,24 +205,24 @@ public class MoveValidator {
         while (true) {
           Position newPos = position.offset(dir[0] * distance, dir[1] * distance);
 
-          System.out.println("DEBUG: King checking position at distance " + distance + ": " + newPos);
+          LOG.debug("King checking position at distance {}: {}", distance, newPos);
 
           // Stop if we've reached the edge of the board
           if (!newPos.isValidForBoard(board.getSize())) {
-            System.out.println("DEBUG: Position invalid for board");
+            LOG.debug("Position invalid for board");
             break;
           }
 
           // Stop if the position is not empty
           if (!board.isEmpty(newPos)) {
-            System.out.println("DEBUG: Position not empty");
+            LOG.debug("Position not empty");
             break;
           }
 
           // This is a valid move
           Move move = Move.MoveFactory.createSimpleMove(position, newPos);
           moves.add(move);
-          System.out.println("DEBUG: Added valid king move: " + position + " to " + newPos);
+          LOG.debug("Added valid king move: {} -> {}", position, newPos);
 
           // Check the next position in this direction
           distance++;
@@ -211,17 +231,17 @@ public class MoveValidator {
         // Regular pieces (men) can only move one square diagonally
         Position newPos = position.offset(dir[0], dir[1]);
 
-        System.out.println("DEBUG: Man checking position: " + newPos);
+        LOG.debug("Man checking position: {}", newPos);
 
         // Check if the new position is valid and empty
         if (newPos.isValidForBoard(board.getSize())) {
-          System.out.println("DEBUG: Position is valid for board");
+          LOG.debug("Position is valid for board");
           if (board.isEmpty(newPos)) {
-            System.out.println("DEBUG: Position is empty");
+            LOG.debug("Position is empty");
 
             // Check if the move results in a promotion
             boolean promotion = isPromotionMove(newPos, piece);
-            System.out.println("DEBUG: Is promotion move: " + promotion);
+            LOG.debug("Is promotion move: {}", promotion);
 
             // Create the appropriate move
             Move move = promotion
@@ -229,9 +249,9 @@ public class MoveValidator {
                 : Move.MoveFactory.createSimpleMove(position, newPos);
 
             moves.add(move);
-            System.out.println("DEBUG: Added valid man move: " + position + " to " + newPos);
+            LOG.debug("Added valid man move: {} -> {}", position, newPos);
           } else {
-            System.out.println("DEBUG: Position is occupied");
+            LOG.debug("Position is occupied");
           }
         } else {
           System.out.println("DEBUG: Position is invalid for board");
@@ -415,7 +435,6 @@ public class MoveValidator {
     } else {
       // Men can only move in the direction of their color
       int direction = piece.getColor().getDirection();
-      System.out.println("DEBUG: Piece color " + piece.getColor() + " has direction: " + direction);
       directions.add(new int[]{direction, -1}); // left
       directions.add(new int[]{direction, 1});  // right
     }

@@ -15,12 +15,16 @@ import com.shalako.checkers.persistence.GameRepository;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The main engine for the checkers game.
  * Handles game logic, move validation, and game state management.
  */
 public class GameEngine {
+    private static final Logger LOG = LoggerFactory.getLogger(GameEngine.class);
+
     private final GameRepository gameRepository;
     private final MoveValidator moveValidator;
     private final ComputerPlayer computerPlayer;
@@ -81,6 +85,10 @@ public class GameEngine {
         if (!currentPlayer.getId().equals(moveRequest.getPlayerId())) {
             throw new IllegalStateException("Not your turn");
         }
+        // Ensure the move request player type matches the current player's type
+        if (moveRequest.getPlayerType() != currentPlayer.getType()) {
+            throw new IllegalArgumentException("Player type in request does not match current player's type");
+        }
 
         // Validate the move
         Move move = moveValidator.validateMove(game, moveRequest);
@@ -90,8 +98,17 @@ public class GameEngine {
             return makeComputerMove(game);
         }
         
+        // Log human move before execution
+        Player player = game.getCurrentPlayer();
+        LOG.info("[HUMAN MOVE] gameId={}, playerId={}, playerName={}, color={}, move={}",
+                game.getId(), player.getId(), player.getName(), player.getColor(), move);
+        
         // Execute the move
         Game updatedGame = executeMove(game, move);
+        
+        // Log result state after human move execution
+        LOG.info("[STATE AFTER HUMAN MOVE] gameId={}, state={}, nextTurn={}",
+                updatedGame.getId(), updatedGame.getState(), updatedGame.getCurrentTurn());
         
         // If it's the computer's turn, make a computer move
         if (!updatedGame.isGameOver() && updatedGame.getCurrentPlayer().getType() == PlayerType.COMPUTER) {
@@ -154,10 +171,13 @@ public class GameEngine {
      */
     private Game makeComputerMove(Game game) {
         Move computerMove = computerPlayer.selectMove(game);
+        Player player = game.getCurrentPlayer();
         if (computerMove == null) {
             // No valid moves, computer loses
             GameState newState = game.getCurrentTurn() == PlayerColor.RED ? 
                                 GameState.BLACK_WON : GameState.RED_WON;
+            LOG.info("[COMPUTER MOVE] gameId={}, playerId={}, playerName={}, color={}, action=NO_VALID_MOVES -> resultState={}",
+                    game.getId(), player.getId(), player.getName(), player.getColor(), newState);
             
             return Game.GameFactory.createGame(
                 game.getId(),
@@ -171,7 +191,12 @@ public class GameEngine {
             );
         }
         
-        return executeMove(game, computerMove);
+        LOG.info("[COMPUTER MOVE] gameId={}, playerId={}, playerName={}, color={}, move={}",
+                game.getId(), player.getId(), player.getName(), player.getColor(), computerMove);
+        Game updated = executeMove(game, computerMove);
+        LOG.info("[STATE AFTER COMPUTER MOVE] gameId={}, state={}, nextTurn={}",
+                updated.getId(), updated.getState(), updated.getCurrentTurn());
+        return updated;
     }
 
     /**
