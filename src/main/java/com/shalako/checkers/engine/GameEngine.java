@@ -94,34 +94,33 @@ public class GameEngine {
                 throw new IllegalArgumentException("Player type in request does not match current player's type");
             }
 
-            // Validate the move
-            Move move = moveValidator.validateMove(game, moveRequest);
-            
-            // For computer moves, the validator returns null and we let the ComputerPlayer select a move
-            if (move == null) {
-                // Computer move: compute and persist
+            // If it's the computer's turn, delegate directly to the computer player
+            if (currentPlayer.getType() == PlayerType.COMPUTER) {
                 Game computerUpdated = makeComputerMove(game);
                 gameRepository.saveGame(computerUpdated);
                 return computerUpdated;
             }
-            
+
+            // Human move: validate and execute
+            Move move = moveValidator.validateMove(game, moveRequest);
+
             // Log human move before execution
             Player player = game.getCurrentPlayer();
             LOG.info("[HUMAN MOVE] gameId={}, playerId={}, playerName={}, color={}, move={}",
                     game.getId(), player.getId(), player.getName(), player.getColor(), move);
-            
+
             // Execute the move
             Game updatedGame = executeMove(game, move);
-            
+
             // Log result state after human move execution
             LOG.info("[STATE AFTER HUMAN MOVE] gameId={}, state={}, nextTurn={}",
                     updatedGame.getId(), updatedGame.getState(), updatedGame.getCurrentTurn());
-            
+
             // If it's the computer's turn, make a computer move
             if (!updatedGame.isGameOver() && updatedGame.getCurrentPlayer().getType() == PlayerType.COMPUTER) {
                 updatedGame = makeComputerMove(updatedGame);
             }
-            
+
             // Persist the latest updated state (after human move and optional computer reply)
             gameRepository.saveGame(updatedGame);
             return updatedGame;

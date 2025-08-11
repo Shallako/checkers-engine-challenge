@@ -2,7 +2,6 @@ package com.shalako.checkers.engine;
 
 import com.shalako.checkers.enums.PieceType;
 import com.shalako.checkers.enums.PlayerColor;
-import com.shalako.checkers.enums.PlayerType;
 import com.shalako.checkers.model.Board;
 import com.shalako.checkers.model.Game;
 import com.shalako.checkers.model.Move;
@@ -25,28 +24,17 @@ public class MoveValidator {
    * Validates a move request and returns a valid Move object.
    */
   public Move validateMove(Game game, MoveRequest moveRequest) {
-      LOG.info("[VALIDATE MOVE REQUEST] gameId={}, playerId={}, playerType={}, from={}, to={}, currentTurn={}",
-              moveRequest.getGameId(), moveRequest.getPlayerId(), moveRequest.getPlayerType(),
+      LOG.info("[VALIDATE MOVE REQUEST] gameId={}, playerId={}, from={}, to={}, currentTurn={}",
+              moveRequest.getGameId(), moveRequest.getPlayerId(),
               moveRequest.getFrom(), moveRequest.getTo(), game.getCurrentTurn());
     Board board = game.getBoard();
     Position from = moveRequest.getFrom();
     Position to = moveRequest.getTo();
 
-    // Determine move flow based on player type in the request
-    if (moveRequest.getPlayerType() == PlayerType.COMPUTER) {
-      if (game.getCurrentPlayer().getType() != PlayerType.COMPUTER) {
-        LOG.warn("[VALIDATION FAILED] Computer move requested but current player is not computer: currentPlayerType={}", game.getCurrentPlayer().getType());
-        throw new IllegalArgumentException("Cannot make a computer move for a human player");
-      }
-      // For computer moves, we'll let the ComputerPlayer select a move
-      LOG.debug("[VALIDATION PASSED] Computer move request accepted for gameId={}", game.getId());
-      return null;
-    }
-
-    // From here on, treat as a human move and require valid positions
+    // Require valid positions for validation (human move only)
     if (from == null || to == null) {
-      LOG.warn("[VALIDATION FAILED] Missing positions for human move: from={}, to={}", from, to);
-      throw new IllegalArgumentException("From and To positions are required for a human move");
+      LOG.warn("[VALIDATION FAILED] Missing positions: from={}, to={}", from, to);
+      throw new IllegalArgumentException("From and To positions are required for move validation");
     }
 
     // Check if positions are valid
@@ -199,8 +187,8 @@ public class MoveValidator {
     for (int[] dir : directions) {
       LOG.debug("Checking direction [{}, {}]", dir[0], dir[1]);
 
-      if (piece.getType() == PieceType.KING) {
-        // For kings in international checkers (Flying Kings), they can move any number of squares diagonally
+      if (piece.getType() == PieceType.KING && isInternational(board)) {
+        // International (10x10): Flying Kings can move any number of squares diagonally
         int distance = 1;
         while (true) {
           Position newPos = position.offset(dir[0] * distance, dir[1] * distance);
@@ -227,7 +215,7 @@ public class MoveValidator {
           // Check the next position in this direction
           distance++;
         }
-      } else if (piece.getType() == PieceType.KING && !isInternational(board)) {
+      } else if (piece.getType() == PieceType.KING) {
         // Standard (8x8): kings move only one square diagonally
         Position newPos = position.offset(dir[0], dir[1]);
         LOG.debug("Standard king checking position: {}", newPos);
@@ -249,7 +237,7 @@ public class MoveValidator {
             LOG.debug("Position is empty");
 
             // Check if the move results in a promotion
-            boolean promotion = isPromotionMove(newPos, piece);
+            boolean promotion = isPromotionMove(board, newPos, piece);
             LOG.debug("Is promotion move: {}", promotion);
 
             // Create the appropriate move
@@ -278,8 +266,16 @@ public class MoveValidator {
   private List<Move> getValidJumps(Board board, Position position, Piece piece, List<Position> capturedSoFar) {
     List<Move> jumps = new ArrayList<>();
 
-    // Determine the directions the piece can move
+    // Determine the directions the piece can move/capture
     List<int[]> directions = getMovementDirections(piece);
+    // In international rules (10x10), men can capture backwards as well
+    if (piece.getType() == PieceType.MAN && isInternational(board)) {
+      directions = new ArrayList<>();
+      directions.add(new int[]{-1, -1});
+      directions.add(new int[]{-1, 1});
+      directions.add(new int[]{1, -1});
+      directions.add(new int[]{1, 1});
+    }
 
     for (int[] dir : directions) {
       // Calculate the position of the potential captured piece
@@ -365,7 +361,7 @@ public class MoveValidator {
           newCaptured.add(capturePos);
 
           // Check if the move results in a promotion
-          boolean promotion = isPromotionMove(landingPos, piece);
+          boolean promotion = isPromotionMove(board, landingPos, piece);
 
           // If promotion, we can't continue jumping
           if (promotion) {
@@ -475,7 +471,7 @@ public class MoveValidator {
    * Checks if a move results in a promotion.
    * FIXED: Improved promotion logic to work with different board sizes.
    */
-  private boolean isPromotionMove(Position to, Piece piece) {
+  private boolean isPromotionMove(Board board, Position to, Piece piece) {
     if (piece.getType() == PieceType.KING) {
       return false;
     }
@@ -484,9 +480,14 @@ public class MoveValidator {
     if (piece.getColor() == PlayerColor.RED) {
       return to.row() == 0;
     } else {
-      // For BLACK pieces, they need to reach the last row
-      // This depends on the board size - for 8x8 it's row 7, for 10x10 it's row 9
-      return to.row() >= 7; // This works for both 8x8 and 10x10 boards
+      // For BLACK pieces, they need to reach the last row based on board size
+      int lastRow = board.getSize().getRows() - 1;
+      return to.row() == lastRow;
     }
+  }
+
+  // Determines whether the game uses international rules based on board size
+  private boolean isInternational(Board board) {
+    return board.getSize().getRows() >= 10;
   }
 }

@@ -1,6 +1,9 @@
 # Checkers Game Engine
 
-A Java-based Checkers game engine that allows a human player to play against a computer opponent on either an 8x8 or 10x10 board. The game state is persisted using Redis.
+NOT FULLY FUNCTIONAL
+
+A Java-based Checkers game engine that allows a human player to play against a computer opponent on either an 8x8 or 10x10 board. The game state is persisted 
+using Redis.
 
 ## Features
 
@@ -27,37 +30,42 @@ A Java-based Checkers game engine that allows a human player to play against a c
 ./gradlew build
 ```
 
-## Running the Game
+## Running the Server (REST API)
 
 ```bash
-./gradlew run
+./gradlew bootRun
 ```
+
+- Server will start at http://localhost:8080
+- CORS is enabled for http://localhost:3000 (the React client default)
+- Note: If you prefer the API under a context path like /api, set `server.servlet.context-path=/api` in `src/main/resources/application.properties` and the endpoints below will be prefixed accordingly.
 
 ## RESTful API
 
-The application also provides a RESTful API for playing the game. The API supports the standard HTTP methods: GET, POST, PUT, and DELETE.
+The application provides a RESTful API for playing the game.
 
 ### Endpoints
 
-- `POST /api/games` - Create a new game
+- `POST /games` - Create a new game
   - Request body: `{ "playerName": "string", "boardSize": "EIGHT_BY_EIGHT|TEN_BY_TEN", "playerColor": "RED|BLACK" }`
   - Response: Game state including board, players, and current turn
 
-- `GET /api/games/{gameId}` - Get game state
+- `GET /games/{gameId}` - Get game state
   - Response: Complete game state
 
-- `GET /api/games/{gameId}/board` - Get a human-readable display of the game board
+- `GET /games/{gameId}/board` - Get a human-readable display of the game board
   - Response: Board display in ASCII format
 
-- `POST /api/games/{gameId}/moves` - Make a move
-  - Request body: `{ "gameId": "string", "playerId": "string", "from": {"row": number, "column": number}, "to": {"row": number, "column": number} }`
+- `POST /games/{gameId}/moves` - Make a move
+  - For human move: `{ "gameId": "string", "playerId": "string", "from": {"row": number, "column": number}, "to": {"row": number, "column": number} }`
+  - For computer move (triggered by client after >=3s): `{ "gameId": "string", "playerId": "string", "from": null, "to": null }`
   - Response: Updated game state
 
 ### Example Usage
 
 1. Create a new game:
    ```
-   POST /api/games
+   POST /games
    {
      "playerName": "Player1",
      "boardSize": "EIGHT_BY_EIGHT",
@@ -67,12 +75,12 @@ The application also provides a RESTful API for playing the game. The API suppor
 
 2. View the board:
    ```
-   GET /api/games/{gameId}/board
+   GET /games/{gameId}/board
    ```
 
 3. Make a move:
    ```
-   POST /api/games/{gameId}/moves
+   POST /games/{gameId}/moves
    {
      "gameId": "{gameId}",
      "playerId": "{playerId}",
@@ -80,6 +88,16 @@ The application also provides a RESTful API for playing the game. The API suppor
      "to": {"row": 4, "column": 1}
    }
    ```
+
+## CORS
+
+See CORS_CONFIGURATION.md for details. By default, the API allows requests from http://localhost:3000.
+
+## Client (React)
+
+A simple React UI is available in the `checkers-client` folder.
+- Setup and usage: see `checkers-client/README.md`
+- Default dev URL: http://localhost:3000 (expects server at http://localhost:8080)
 
 ## How to Play
 
@@ -94,15 +112,21 @@ The application also provides a RESTful API for playing the game. The API suppor
 
 ## Game Rules
 
-The game follows standard Checkers rules:
+- On 8x8 boards: English/American checkers rules
+  - Red moves first
+  - Men move one step diagonally forward only; men capture forward only
+  - Kings move one step diagonally in any direction; kings capture with an immediate landing square
+  - Captures are mandatory; multiple captures are allowed when available
+  - A piece is promoted to a king when it reaches the opposite end of the board
+  - A player wins when the opponent has no pieces left or cannot make a legal move
 
-- Red moves first
-- Pieces move diagonally forward (unless they are kings)
-- Kings can move diagonally in any direction
-- Captures are made by jumping over an opponent's piece
-- Multiple captures in a single turn are allowed and mandatory
-- A piece is promoted to a king when it reaches the opposite end of the board
-- A player wins when the opponent has no pieces left or cannot make a legal move
+- On 10x10 boards: International draughts rules
+  - Red moves first
+  - Men move one step diagonally forward; men may capture both forward and backward
+  - Kings are flying kings: they move any number of squares diagonally across empty squares and may land on any empty square beyond a captured piece
+  - Captures are mandatory; multiple captures are allowed and chaining is supported
+  - A piece is promoted to a king when it reaches the opposite end of the board
+  - A player wins when the opponent has no pieces left or cannot make a legal move
 
 ## Implementation Details
 
