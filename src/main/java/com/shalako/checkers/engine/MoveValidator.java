@@ -227,6 +227,15 @@ public class MoveValidator {
           // Check the next position in this direction
           distance++;
         }
+      } else if (piece.getType() == PieceType.KING && !isInternational(board)) {
+        // Standard (8x8): kings move only one square diagonally
+        Position newPos = position.offset(dir[0], dir[1]);
+        LOG.debug("Standard king checking position: {}", newPos);
+        if (newPos.isValidForBoard(board.getSize()) && board.isEmpty(newPos)) {
+          Move move = Move.MoveFactory.createSimpleMove(position, newPos);
+          moves.add(move);
+          LOG.debug("Added valid standard king move: {} -> {}", position, newPos);
+        }
       } else {
         // Regular pieces (men) can only move one square diagonally
         Position newPos = position.offset(dir[0], dir[1]);
@@ -277,61 +286,71 @@ public class MoveValidator {
       Position capturePos = position.offset(dir[0], dir[1]);
 
       if (piece.getType() == PieceType.KING) {
-        // For kings (Flying Kings), we need to check if there's an opponent's piece to capture
-        if (capturePos.isValidForBoard(board.getSize())) {
-          Piece capturePiece = board.getPieceAt(capturePos);
-
-          // Check if there is an opponent's piece to capture and it hasn't been captured before
-          if (capturePiece != null && capturePiece.getColor() != piece.getColor()
-              && !capturedSoFar.contains(capturePos)) {
-
-            // For Flying Kings, check all possible landing positions after the capture
-            int distance = 2;  // Start with the immediate landing position
-            while (true) {
-              Position landingPos = position.offset(dir[0] * distance, dir[1] * distance);
-
-              // Stop if we've reached the edge of the board
-              if (!landingPos.isValidForBoard(board.getSize())) {
-                break;
-              }
-
-              // Stop if the landing position is not empty
-              if (!board.isEmpty(landingPos)) {
-                break;
-              }
-
-              // This is a valid landing position after the capture
-              // Create a new list of captured pieces
-              List<Position> newCaptured = new ArrayList<>(capturedSoFar);
-              newCaptured.add(capturePos);
-
-              // Check for additional jumps from the landing position
-              List<Move> continuedJumps = getValidJumps(
-                  createBoardAfterJump(board, position, landingPos, capturePos),
-                  landingPos,
-                  piece,
-                  newCaptured
-              );
-
-              if (continuedJumps.isEmpty()) {
-                // No more jumps, create a single jump move
-                jumps.add(Move.MoveFactory.createJumpMove(position, landingPos, capturePos));
-              } else {
-                // Add multi-jump moves
-                for (Move continuedJump : continuedJumps) {
-                  List<Position> allCaptured = new ArrayList<>(newCaptured);
-                  allCaptured.addAll(continuedJump.getCapturedPieces());
-
-                  jumps.add(Move.MoveFactory.createMultiJumpMove(
-                      position,
-                      continuedJump.getTo(),
-                      allCaptured
-                  ));
+        if (isInternational(board)) {
+          // International (10x10): Flying Kings capture with any landing distance beyond the captured piece
+          if (capturePos.isValidForBoard(board.getSize())) {
+            Piece capturePiece = board.getPieceAt(capturePos);
+            if (capturePiece != null && capturePiece.getColor() != piece.getColor()
+                && !capturedSoFar.contains(capturePos)) {
+              int distance = 2;  // Start with the immediate landing position
+              while (true) {
+                Position landingPos = position.offset(dir[0] * distance, dir[1] * distance);
+                if (!landingPos.isValidForBoard(board.getSize())) {
+                  break;
                 }
+                if (!board.isEmpty(landingPos)) {
+                  break;
+                }
+                List<Position> newCaptured = new ArrayList<>(capturedSoFar);
+                newCaptured.add(capturePos);
+                List<Move> continuedJumps = getValidJumps(
+                    createBoardAfterJump(board, position, landingPos, capturePos),
+                    landingPos,
+                    piece,
+                    newCaptured
+                );
+                if (continuedJumps.isEmpty()) {
+                  jumps.add(Move.MoveFactory.createJumpMove(position, landingPos, capturePos));
+                } else {
+                  for (Move continuedJump : continuedJumps) {
+                    List<Position> allCaptured = new ArrayList<>(newCaptured);
+                    allCaptured.addAll(continuedJump.getCapturedPieces());
+                    jumps.add(Move.MoveFactory.createMultiJumpMove(
+                        position,
+                        continuedJump.getTo(),
+                        allCaptured
+                    ));
+                  }
+                }
+                distance++;
               }
-
-              // Check the next position in this direction
-              distance++;
+            }
+          }
+        } else {
+          // Standard (8x8): kings capture like men; landing immediately beyond captured piece
+          Position landingPos = position.offset(dir[0] * 2, dir[1] * 2);
+          if (isValidJump(board, position, capturePos, landingPos, piece, capturedSoFar)) {
+            List<Position> newCaptured = new ArrayList<>(capturedSoFar);
+            newCaptured.add(capturePos);
+            // Continue jumping from landing position
+            List<Move> continuedJumps = getValidJumps(
+                createBoardAfterJump(board, position, landingPos, capturePos),
+                landingPos,
+                piece,
+                newCaptured
+            );
+            if (continuedJumps.isEmpty()) {
+              jumps.add(Move.MoveFactory.createJumpMove(position, landingPos, capturePos));
+            } else {
+              for (Move continuedJump : continuedJumps) {
+                List<Position> allCaptured = new ArrayList<>(newCaptured);
+                allCaptured.addAll(continuedJump.getCapturedPieces());
+                jumps.add(Move.MoveFactory.createMultiJumpMove(
+                    position,
+                    continuedJump.getTo(),
+                    allCaptured
+                ));
+              }
             }
           }
         }

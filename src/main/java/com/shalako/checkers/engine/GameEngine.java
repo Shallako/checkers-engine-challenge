@@ -72,55 +72,69 @@ public class GameEngine {
      * Makes a move in the game based on the move request.
      */
     public Game makeMove(MoveRequest moveRequest) {
-        Game game = gameRepository.getGame(moveRequest.getGameId());
-        if (game == null) {
+        // Load and keep an immutable snapshot to allow rollback on any failure
+        Game originalGame = gameRepository.getGame(moveRequest.getGameId());
+        if (originalGame == null) {
             throw new IllegalArgumentException("Game not found: " + moveRequest.getGameId());
         }
 
-        if (game.isGameOver()) {
-            throw new IllegalStateException("Game is already over");
-        }
+        try {
+            Game game = originalGame; // work on a local reference
 
-        Player currentPlayer = game.getCurrentPlayer();
-        if (!currentPlayer.getId().equals(moveRequest.getPlayerId())) {
-            throw new IllegalStateException("Not your turn");
-        }
-        // Ensure the move request player type matches the current player's type
-        if (moveRequest.getPlayerType() != currentPlayer.getType()) {
-            throw new IllegalArgumentException("Player type in request does not match current player's type");
-        }
+            if (game.isGameOver()) {
+                throw new IllegalStateException("Game is already over");
+            }
 
-        // Validate the move
-        Move move = moveValidator.validateMove(game, moveRequest);
-        
-        // For computer moves, the validator returns null and we let the ComputerPlayer select a move
-        if (move == null) {
-            // Computer move: compute and persist
-            Game computerUpdated = makeComputerMove(game);
-            gameRepository.saveGame(computerUpdated);
-            return computerUpdated;
+            Player currentPlayer = game.getCurrentPlayer();
+            if (!currentPlayer.getId().equals(moveRequest.getPlayerId())) {
+                throw new IllegalStateException("Not your turn");
+            }
+            // Ensure the move request player type matches the current player's type
+            if (moveRequest.getPlayerType() != currentPlayer.getType()) {
+                throw new IllegalArgumentException("Player type in request does not match current player's type");
+            }
+
+            // Validate the move
+            Move move = moveValidator.validateMove(game, moveRequest);
+            
+            // For computer moves, the validator returns null and we let the ComputerPlayer select a move
+            if (move == null) {
+                // Computer move: compute and persist
+                Game computerUpdated = makeComputerMove(game);
+                gameRepository.saveGame(computerUpdated);
+                return computerUpdated;
+            }
+            
+            // Log human move before execution
+            Player player = game.getCurrentPlayer();
+            LOG.info("[HUMAN MOVE] gameId={}, playerId={}, playerName={}, color={}, move={}",
+                    game.getId(), player.getId(), player.getName(), player.getColor(), move);
+            
+            // Execute the move
+            Game updatedGame = executeMove(game, move);
+            
+            // Log result state after human move execution
+            LOG.info("[STATE AFTER HUMAN MOVE] gameId={}, state={}, nextTurn={}",
+                    updatedGame.getId(), updatedGame.getState(), updatedGame.getCurrentTurn());
+            
+            // If it's the computer's turn, make a computer move
+            if (!updatedGame.isGameOver() && updatedGame.getCurrentPlayer().getType() == PlayerType.COMPUTER) {
+                updatedGame = makeComputerMove(updatedGame);
+            }
+            
+            // Persist the latest updated state (after human move and optional computer reply)
+            gameRepository.saveGame(updatedGame);
+            return updatedGame;
+        } catch (RuntimeException ex) {
+            // Explicit rollback to the original state to guarantee no partial updates remain
+            try {
+                gameRepository.saveGame(originalGame);
+                LOG.warn("[ROLLBACK] Restored original game state after failed move: gameId={}", originalGame.getId());
+            } catch (Exception saveEx) {
+                LOG.error("[ROLLBACK FAILED] Could not restore original game state: gameId={}", originalGame.getId(), saveEx);
+            }
+            throw ex;
         }
-        
-        // Log human move before execution
-        Player player = game.getCurrentPlayer();
-        LOG.info("[HUMAN MOVE] gameId={}, playerId={}, playerName={}, color={}, move={}",
-                game.getId(), player.getId(), player.getName(), player.getColor(), move);
-        
-        // Execute the move
-        Game updatedGame = executeMove(game, move);
-        
-        // Log result state after human move execution
-        LOG.info("[STATE AFTER HUMAN MOVE] gameId={}, state={}, nextTurn={}",
-                updatedGame.getId(), updatedGame.getState(), updatedGame.getCurrentTurn());
-        
-        // If it's the computer's turn, make a computer move
-        if (!updatedGame.isGameOver() && updatedGame.getCurrentPlayer().getType() == PlayerType.COMPUTER) {
-            updatedGame = makeComputerMove(updatedGame);
-        }
-        
-        // Persist the latest updated state (after human move and optional computer reply)
-        gameRepository.saveGame(updatedGame);
-        return updatedGame;
     }
 
     /**
