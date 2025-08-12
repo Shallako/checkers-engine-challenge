@@ -41,21 +41,24 @@ public class EmbeddedRedisServer {
      */
     public static void start() {
         logger.info("Starting embedded Redis server");
-        
-        // First try the default port
+
+        // If an external Redis already runs on the default port, don't start embedded
+        try {
+            if (checkExternalRedisServer(DEFAULT_PORT)) {
+                currentPort = DEFAULT_PORT;
+                logger.info("Detected external Redis on port {}. Skipping embedded startup.", DEFAULT_PORT);
+                return;
+            }
+        } catch (Exception ignore) {
+            // proceed with attempting to start embedded
+        }
+
+        // Try only the default port to avoid repeated failures when the binary is not available
         if (startOnPort(DEFAULT_PORT)) {
             return;
         }
-        
-        // If default port fails, try fallback ports
-        for (int fallbackPort : FALLBACK_PORTS) {
-            if (startOnPort(fallbackPort)) {
-                return;
-            }
-        }
-        
-        logger.error("Failed to start embedded Redis server on any port");
-        logger.error("The application will attempt to connect to Redis at 127.0.0.1:{}, but will likely fail", DEFAULT_PORT);
+
+        logger.error("Failed to start embedded Redis server on port {}. You may set 'redis.embedded.enabled=false' and 'redis.external.enabled=true' to use an external Redis.", DEFAULT_PORT);
     }
 
     /**
@@ -76,14 +79,7 @@ public class EmbeddedRedisServer {
                 logger.warn("Port {} is already in use, trying next port", port);
                 return false;
             }
-            
-            // Build Redis server with basic configuration
-            redisServer = RedisServer.builder()
-                .port(port)
-                .setting("maxmemory " + DEFAULT_MAXMEMORY)
-                .setting("bind 127.0.0.1")
-                .build();
-            
+            redisServer = new RedisServer(port);
             redisServer.start();
             currentPort = port;
             logger.info("Embedded Redis server started on port {}", port);
@@ -99,8 +95,12 @@ public class EmbeddedRedisServer {
      */
     public static void stop() {
         if (redisServer != null && redisServer.isActive()) {
+          try {
             redisServer.stop();
-            logger.info("Embedded Redis server stopped");
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+          logger.info("Embedded Redis server stopped");
         }
     }
 

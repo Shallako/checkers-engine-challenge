@@ -18,9 +18,8 @@ dependencies {
     implementation 'ch.qos.logback:logback-classic:1.4.11'
     
     // Embedded Redis for development
-    implementation('com.github.kstyrc:embedded-redis:0.6') {
-        exclude group: 'commons-logging', module: 'commons-logging'
-    }
+    // https://mvnrepository.com/artifact/com.github.codemonstur/embedded-redis
+    implementation("com.github.codemonstur:embedded-redis:1.4.3")
     
     // Spring Boot dependencies
     implementation 'org.springframework.boot:spring-boot-starter-web'
