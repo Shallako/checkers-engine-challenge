@@ -33,7 +33,7 @@ public class GameControllerTest {
     private GameEngine gameEngine;
 
     private String getBaseUrl() {
-        return "http://localhost:" + port + "/api/games";
+        return "http://localhost:" + port + "/games";
     }
 
     @Test
