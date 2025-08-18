@@ -3,6 +3,7 @@ package com.shalako.checkers.engine;
 import com.shalako.checkers.enums.BoardSize;
 import com.shalako.checkers.enums.GameState;
 import com.shalako.checkers.enums.PlayerColor;
+import com.shalako.checkers.engine.rules.GameRules;
 import com.shalako.checkers.enums.PlayerType;
 import com.shalako.checkers.model.Board;
 import com.shalako.checkers.model.Game;
@@ -26,13 +27,13 @@ public class GameEngine {
     private static final Logger LOG = LoggerFactory.getLogger(GameEngine.class);
 
     private final GameRepository gameRepository;
-    private final MoveValidator moveValidator;
+    private final GameRulesFactory gameRulesFactory;
     private final ComputerPlayer computerPlayer;
 
-    public GameEngine(GameRepository gameRepository) {
+    public GameEngine(GameRepository gameRepository, GameRulesFactory gameRulesFactory) {
         this.gameRepository = gameRepository;
-        this.moveValidator = new MoveValidator();
-        this.computerPlayer = new ComputerPlayer();
+        this.gameRulesFactory = gameRulesFactory;
+        this.computerPlayer = new ComputerPlayer(gameRulesFactory);
     }
 
     /**
@@ -54,7 +55,8 @@ public class GameEngine {
                 game.getCurrentTurn(),
                 GameState.IN_PROGRESS,
                 game.getCreatedAt(),
-                game.getUpdatedAt()
+                game.getUpdatedAt(),
+                game.getGameType()
             );
         }
         
@@ -102,7 +104,7 @@ public class GameEngine {
             }
 
             // Human move: validate and execute
-            Move move = moveValidator.validateMove(game, moveRequest);
+            Move move = gameRulesFactory.getRules(game.getGameType()).validateMove(game, moveRequest);
 
             // Log human move before execution
             Player player = game.getCurrentPlayer();
@@ -167,9 +169,22 @@ public class GameEngine {
         
         // Create a new board with the updated pieces
         Board newBoard = Board.BoardFactory.createCustomBoard(game.getBoard().getSize(), pieces);
+
+        // Create a temporary game object to pass to determineGameState
+        Game tempGame = Game.GameFactory.createGame(
+            game.getId(),
+            newBoard,
+            game.getRedPlayer(),
+            game.getBlackPlayer(),
+            game.getCurrentTurn().getOpposite(),
+            game.getState(),
+            game.getCreatedAt(),
+            game.getUpdatedAt(),
+            game.getGameType()
+        );
         
         // Check for game over conditions
-        GameState newState = determineGameState(newBoard, game.getCurrentTurn().getOpposite());
+        GameState newState = determineGameState(tempGame);
         
         // Create a new game with the updated state
         return Game.GameFactory.createGame(
@@ -180,7 +195,8 @@ public class GameEngine {
             newState.isGameOver() ? game.getCurrentTurn() : game.getCurrentTurn().getOpposite(),
             newState,
             game.getCreatedAt(),
-            Instant.now()
+            Instant.now(),
+            game.getGameType()
         );
     }
 
@@ -205,7 +221,8 @@ public class GameEngine {
                 game.getCurrentTurn(),
                 newState,
                 game.getCreatedAt(),
-                Instant.now()
+                Instant.now(),
+                game.getGameType()
             );
         }
         
@@ -220,37 +237,37 @@ public class GameEngine {
     /**
      * Determines the game state after a move.
      */
-    private GameState determineGameState(Board board, PlayerColor nextTurn) {
+    private GameState determineGameState(Game game) {
         // Check if any player has no pieces left
         boolean redHasPieces = false;
         boolean blackHasPieces = false;
-        
-        for (Piece piece : board.getPieces().values()) {
+
+        for (Piece piece : game.getBoard().getPieces().values()) {
             if (piece.getColor() == PlayerColor.RED) {
                 redHasPieces = true;
             } else {
                 blackHasPieces = true;
             }
-            
+
             if (redHasPieces && blackHasPieces) {
                 break;
             }
         }
-        
+
         if (!redHasPieces) {
             return GameState.BLACK_WON;
         }
-        
+
         if (!blackHasPieces) {
             return GameState.RED_WON;
         }
-        
+
         // Check if the next player has any valid moves
-        boolean hasValidMoves = moveValidator.hasValidMoves(board, nextTurn);
-        if (!hasValidMoves) {
-            return nextTurn == PlayerColor.RED ? GameState.BLACK_WON : GameState.RED_WON;
+        GameRules rules = gameRulesFactory.getRules(game.getGameType());
+        if (!rules.hasValidMoves(game.getBoard(), game.getCurrentTurn())) {
+            return game.getCurrentTurn() == PlayerColor.RED ? GameState.BLACK_WON : GameState.RED_WON;
         }
-        
+
         return GameState.IN_PROGRESS;
     }
 }
