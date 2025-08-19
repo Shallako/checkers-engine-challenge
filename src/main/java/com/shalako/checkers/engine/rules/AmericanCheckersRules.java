@@ -21,8 +21,8 @@ public class AmericanCheckersRules implements GameRules {
     @Override
     public Move validateMove(Game game, MoveRequest moveRequest) {
         log.info("[VALIDATE MOVE REQUEST] gameId={}, playerId={}, from={}, to={}, currentTurn={}",
-                moveRequest.getGameId(), moveRequest.getPlayerId(),
-                moveRequest.getFrom(), moveRequest.getTo(), game.getCurrentTurn());
+            moveRequest.getGameId(), moveRequest.getPlayerId(),
+            moveRequest.getFrom(), moveRequest.getTo(), game.getCurrentTurn());
         Board board = game.getBoard();
         Position from = moveRequest.getFrom();
         Position to = moveRequest.getTo();
@@ -58,20 +58,28 @@ public class AmericanCheckersRules implements GameRules {
             throw new IllegalArgumentException("Move must be diagonal");
         }
 
-        boolean jumpMovesAvailable = hasJumpMoves(board, game.getCurrentTurn());
-        List<Move> validMoves = getValidMoves(board, from);
+        List<Move> allPossibleMovesForPlayer = getAllValidMoves(board, game.getCurrentTurn());
+        boolean jumpMovesAvailable = allPossibleMovesForPlayer.stream().anyMatch(Move::isJump);
+        List<Move> validMovesForPiece = getValidMoves(board, from);
 
         if (jumpMovesAvailable) {
-            for (Move move : validMoves) {
-                if (move.isJump() && move.getTo().equals(to)) {
-                    log.debug("[VALIDATION PASSED] Jump move selected: {} -> {}", from, to);
+            List<Move> jumpMovesForPiece = validMovesForPiece.stream().filter(Move::isJump).toList();
+            if (jumpMovesForPiece.isEmpty()) {
+                throw new IllegalArgumentException("Invalid move, jump is mandatory but not possible from selected piece");
+            }
+
+            for (Move move : jumpMovesForPiece) {
+                // For a human player, we are just validating one leg of a multi-jump at a time.
+                // The `to` position of the request must match the second position in the move's path.
+                if (move.getPath().size() > 1 && move.getPath().get(1).equals(to)) {
+                    log.debug("[VALIDATION PASSED] Jump move selected: {}", move);
                     return move;
                 }
             }
-            log.warn("[VALIDATION FAILED] Jump required but attempted non-jump: from={}, to={}", from, to);
-            throw new IllegalArgumentException("Jump move is mandatory when available");
+            log.warn("[VALIDATION FAILED] Jump required but attempted invalid jump: from={}, to={}", from, to);
+            throw new IllegalArgumentException("Invalid jump");
         } else {
-            for (Move move : validMoves) {
+            for (Move move : validMovesForPiece) {
                 if (move.getTo().equals(to)) {
                     log.debug("[VALIDATION PASSED] Simple move selected: {} -> {}", from, to);
                     return move;
@@ -91,7 +99,7 @@ public class AmericanCheckersRules implements GameRules {
         }
 
         List<Move> validMoves = new ArrayList<>();
-        List<Move> jumps = getValidJumps(board, position, piece, new ArrayList<>());
+        List<Move> jumps = findMaximumCaptureMoves(board, position);
 
         if (!jumps.isEmpty()) {
             validMoves.addAll(jumps);
@@ -114,10 +122,35 @@ public class AmericanCheckersRules implements GameRules {
         return false;
     }
 
+    private List<Move> findMaximumCaptureMoves(Board board, Position position) {
+        List<Move> allJumps = new ArrayList<>();
+        Piece piece = board.getPieceAt(position);
+        if (piece == null) {
+            return Collections.emptyList();
+        }
+
+        List<Position> initialPath = new ArrayList<>();
+        initialPath.add(position);
+        getValidJumpsRecursive(board, piece, initialPath, new ArrayList<>(), allJumps);
+
+        if (allJumps.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        int maxCaptures = allJumps.stream()
+            .mapToInt(move -> move.getCapturedPieces().size())
+            .max()
+            .orElse(0);
+
+        return allJumps.stream()
+            .filter(move -> move.getCapturedPieces().size() == maxCaptures)
+            .toList();
+    }
+
     private boolean hasJumpMoves(Board board, PlayerColor color) {
         for (Map.Entry<Position, Piece> entry : board.getPieces().entrySet()) {
             if (entry.getValue().getColor() == color) {
-                if (!getValidJumps(board, entry.getKey(), entry.getValue(), new ArrayList<>()).isEmpty()) {
+                if (!findMaximumCaptureMoves(board, entry.getKey()).isEmpty()) {
                     return true;
                 }
             }
@@ -147,47 +180,50 @@ public class AmericanCheckersRules implements GameRules {
         return moves;
     }
 
-    private List<Move> getValidJumps(Board board, Position position, Piece piece, List<Position> capturedSoFar) {
-        List<Move> jumps = new ArrayList<>();
+    private void getValidJumpsRecursive(Board board, Piece piece, List<Position> currentPath, List<Position> capturedSoFar, List<Move> allJumps) {
+        Position currentPosition = currentPath.get(currentPath.size() - 1);
         List<int[]> directions = getMovementDirections(piece);
+        boolean foundNextJump = false;
 
         for (int[] dir : directions) {
-            Position capturePos = position.offset(dir[0], dir[1]);
-            Position landingPos = position.offset(dir[0] * 2, dir[1] * 2);
+            Position capturePos = currentPosition.offset(dir[0], dir[1]);
+            Position landingPos = currentPosition.offset(dir[0] * 2, dir[1] * 2);
 
-            if (isValidJump(board, position, capturePos, landingPos, piece, capturedSoFar)) {
+            if (isValidJump(board, currentPosition, capturePos, landingPos, piece, capturedSoFar)) {
+                foundNextJump = true;
+                List<Position> newPath = new ArrayList<>(currentPath);
+                newPath.add(landingPos);
                 List<Position> newCaptured = new ArrayList<>(capturedSoFar);
                 newCaptured.add(capturePos);
 
                 boolean promotion = isPromotionMove(board, landingPos, piece);
                 if (promotion) {
-                    jumps.add(Move.MoveFactory.createJumpPromotionMove(position, landingPos, capturePos));
-                    continue;
+                    allJumps.add(Move.MoveFactory.createMultiJumpPromotionMove(newPath, newCaptured));
+                    continue; // Stop searching further down this path upon promotion
                 }
 
-                List<Move> continuedJumps = getValidJumps(
-                        createBoardAfterJump(board, position, landingPos, capturePos),
-                        landingPos,
-                        piece,
-                        newCaptured
-                );
-
-                if (continuedJumps.isEmpty()) {
-                    jumps.add(Move.MoveFactory.createJumpMove(position, landingPos, capturePos));
-                } else {
-                    for (Move continuedJump : continuedJumps) {
-                        List<Position> allCaptured = new ArrayList<>(newCaptured);
-                        allCaptured.addAll(continuedJump.getCapturedPieces());
-                        jumps.add(Move.MoveFactory.createMultiJumpMove(
-                                position,
-                                continuedJump.getTo(),
-                                allCaptured
-                        ));
-                    }
-                }
+                getValidJumpsRecursive(
+                    createBoardAfterJump(board, currentPosition, landingPos, capturePos),
+                    piece,
+                    newPath,
+                    newCaptured,
+                    allJumps);
             }
         }
-        return jumps;
+
+        if (!foundNextJump && !capturedSoFar.isEmpty()) {
+            allJumps.add(Move.MoveFactory.createMultiJumpMove(currentPath, capturedSoFar));
+        }
+    }
+
+    private List<Move> getAllValidMoves(Board board, PlayerColor color) {
+        List<Move> allMoves = new ArrayList<>();
+        for (Map.Entry<Position, Piece> entry : board.getPieces().entrySet()) {
+            if (entry.getValue().getColor() == color) {
+                allMoves.addAll(getValidMoves(board, entry.getKey()));
+            }
+        }
+        return allMoves;
     }
 
     private boolean isValidJump(Board board, Position from, Position capturePos, Position landingPos,

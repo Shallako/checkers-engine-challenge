@@ -42,23 +42,31 @@ public class EmbeddedRedisServer {
     public static void start() {
         logger.info("Starting embedded Redis server");
 
-        // If an external Redis already runs on the default port, don't start embedded
-        try {
-            if (!checkExternalRedisServer(DEFAULT_PORT)) {
-                currentPort = DEFAULT_PORT;
-                logger.info("Detected external Redis on port {}. Skipping embedded startup.", DEFAULT_PORT);
-                return;
-            }
-        } catch (Exception ignore) {
-            // proceed with attempting to start embedded
+        if (checkExternalRedisServer(DEFAULT_PORT)) {
+            currentPort = DEFAULT_PORT;
+            logger.info("Detected external Redis on port {}. Skipping embedded startup.", DEFAULT_PORT);
+            return;
         }
 
-        // Try only the default port to avoid repeated failures when the binary is not available
+        for (int port : FALLBACK_PORTS) {
+            if (checkExternalRedisServer(port)) {
+                currentPort = port;
+                logger.info("Detected external Redis on port {}. Skipping embedded startup.", port);
+                return;
+            }
+        }
+
         if (startOnPort(DEFAULT_PORT)) {
             return;
         }
 
-        logger.error("Failed to start embedded Redis server on port {}. You may set 'redis.embedded.enabled=false' and 'redis.external.enabled=true' to use an external Redis.", DEFAULT_PORT);
+        for (int port : FALLBACK_PORTS) {
+            if (startOnPort(port)) {
+                return;
+            }
+        }
+
+        logger.error("Failed to start embedded Redis server on any of the specified ports. You may set 'redis.embedded.enabled=false' and 'redis.external.enabled=true' to use an external Redis.");
     }
 
     /**
