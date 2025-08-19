@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -95,5 +96,21 @@ class InternationalDraughtsRulesTest {
         List<Move> moves = rules.getValidMoves(board, new Position(3, 5));
         log.info("Moves for (3,5): {}", moves);
         assertTrue(moves.isEmpty());
+    }
+
+    @Test
+    void testKingMultiJumpDoesNotCauseInfiniteLoop() {
+        Map<Position, Piece> pieces = new HashMap<>();
+        pieces.put(new Position(5, 5), Piece.PieceFactory.createKing(PlayerColor.RED));
+        pieces.put(new Position(4, 4), Piece.PieceFactory.createMan(PlayerColor.BLACK));
+        pieces.put(new Position(2, 6), Piece.PieceFactory.createMan(PlayerColor.BLACK));
+        board = Board.BoardFactory.createCustomBoard(BoardSize.TEN_BY_TEN, pieces);
+
+        // The king can jump from (5,5) to (3,3) capturing (4,4).
+        // Then from (3,3) to (1,7) capturing (2,6).
+        // This test ensures that the getValidMoves method does not hang.
+        assertTimeout(java.time.Duration.ofSeconds(1), () -> {
+            rules.getValidMoves(board, new Position(5, 5));
+        });
     }
 }

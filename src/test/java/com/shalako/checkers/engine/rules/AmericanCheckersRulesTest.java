@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
 
 class AmericanCheckersRulesTest {
 
@@ -59,5 +60,21 @@ class AmericanCheckersRulesTest {
 
         List<Move> moves = rules.getValidMoves(board, new Position(3, 3));
         assertEquals(4, moves.size());
+    }
+
+    @Test
+    void testKingMultiJumpDoesNotCauseInfiniteLoop() {
+        Map<Position, Piece> pieces = new HashMap<>();
+        pieces.put(new Position(4, 4), Piece.PieceFactory.createKing(PlayerColor.RED));
+        pieces.put(new Position(3, 3), Piece.PieceFactory.createMan(PlayerColor.BLACK));
+        pieces.put(new Position(1, 5), Piece.PieceFactory.createMan(PlayerColor.BLACK));
+        board = Board.BoardFactory.createCustomBoard(BoardSize.EIGHT_BY_EIGHT, pieces);
+
+        // The king can jump from (4,4) to (2,2) capturing (3,3).
+        // Then from (2,2) to (0,6) capturing (1,5).
+        // This test ensures that the getValidMoves method does not hang.
+        assertTimeout(java.time.Duration.ofSeconds(1), () -> {
+            rules.getValidMoves(board, new Position(4, 4));
+        });
     }
 }

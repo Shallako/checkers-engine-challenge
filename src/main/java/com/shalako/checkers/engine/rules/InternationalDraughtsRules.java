@@ -13,8 +13,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
@@ -145,11 +147,13 @@ public class InternationalDraughtsRules implements GameRules {
         List<Move> jumps = new ArrayList<>();
         // Use a stack for iterative deepening search
         Stack<JumpState> stack = new Stack<>();
-        stack.push(new JumpState(startPos, board, capturedSoFar));
+        stack.push(new JumpState(startPos, board, capturedSoFar, new HashSet<>()));
 
         while (!stack.isEmpty()) {
             JumpState currentState = stack.pop();
             boolean foundContinuation = false;
+
+            currentState.visited.add(currentState.pos);
 
             for (int[] dir : getMovementDirections(piece, true)) {
                 Position capturePos = findCapture(currentState.board, currentState.pos, dir, piece, currentState.captured);
@@ -157,12 +161,17 @@ public class InternationalDraughtsRules implements GameRules {
 
                 Position landingPos = capturePos.offset(dir[0], dir[1]);
                 while (landingPos.isValidForBoard(board.getSize()) && currentState.board.isEmpty(landingPos)) {
+                    if (currentState.visited.contains(landingPos)) {
+                        landingPos = landingPos.offset(dir[0], dir[1]);
+                        continue;
+                    }
+
                     List<Position> nextCaptured = new ArrayList<>(currentState.captured);
                     nextCaptured.add(capturePos);
 
                     Board nextBoard = createBoardAfterJump(currentState.board, currentState.pos, landingPos, capturePos);
 
-                    stack.push(new JumpState(landingPos, nextBoard, nextCaptured));
+                    stack.push(new JumpState(landingPos, nextBoard, nextCaptured, new HashSet<>(currentState.visited)));
                     foundContinuation = true;
 
                     if (piece.getType() != PieceType.KING) break;
@@ -181,11 +190,13 @@ public class InternationalDraughtsRules implements GameRules {
         final Position pos;
         final Board board;
         final List<Position> captured;
+        final Set<Position> visited;
 
-        JumpState(Position pos, Board board, List<Position> captured) {
+        JumpState(Position pos, Board board, List<Position> captured, Set<Position> visited) {
             this.pos = pos;
             this.board = board;
             this.captured = captured;
+            this.visited = visited;
         }
     }
 

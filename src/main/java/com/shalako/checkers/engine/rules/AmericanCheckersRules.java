@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -91,7 +92,7 @@ public class AmericanCheckersRules implements GameRules {
         }
 
         List<Move> validMoves = new ArrayList<>();
-        List<Move> jumps = getValidJumps(board, position, piece, new ArrayList<>());
+        List<Move> jumps = getValidJumps(board, position, piece, new ArrayList<>(), new java.util.HashSet<>());
 
         if (!jumps.isEmpty()) {
             validMoves.addAll(jumps);
@@ -117,7 +118,7 @@ public class AmericanCheckersRules implements GameRules {
     private boolean hasJumpMoves(Board board, PlayerColor color) {
         for (Map.Entry<Position, Piece> entry : board.getPieces().entrySet()) {
             if (entry.getValue().getColor() == color) {
-                if (!getValidJumps(board, entry.getKey(), entry.getValue(), new ArrayList<>()).isEmpty()) {
+                if (!getValidJumps(board, entry.getKey(), entry.getValue(), new ArrayList<>(), new java.util.HashSet<>()).isEmpty()) {
                     return true;
                 }
             }
@@ -147,15 +148,17 @@ public class AmericanCheckersRules implements GameRules {
         return moves;
     }
 
-    private List<Move> getValidJumps(Board board, Position position, Piece piece, List<Position> capturedSoFar) {
+    private List<Move> getValidJumps(Board board, Position position, Piece piece, List<Position> capturedSoFar, Set<Position> visitedPositions) {
         List<Move> jumps = new ArrayList<>();
         List<int[]> directions = getMovementDirections(piece);
+
+        visitedPositions.add(position);
 
         for (int[] dir : directions) {
             Position capturePos = position.offset(dir[0], dir[1]);
             Position landingPos = position.offset(dir[0] * 2, dir[1] * 2);
 
-            if (isValidJump(board, position, capturePos, landingPos, piece, capturedSoFar)) {
+            if (isValidJump(board, position, capturePos, landingPos, piece, capturedSoFar) && !visitedPositions.contains(landingPos)) {
                 List<Position> newCaptured = new ArrayList<>(capturedSoFar);
                 newCaptured.add(capturePos);
 
@@ -169,7 +172,8 @@ public class AmericanCheckersRules implements GameRules {
                         createBoardAfterJump(board, position, landingPos, capturePos),
                         landingPos,
                         piece,
-                        newCaptured
+                        newCaptured,
+                        new java.util.HashSet<>(visitedPositions)
                 );
 
                 if (continuedJumps.isEmpty()) {

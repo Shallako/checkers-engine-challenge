@@ -73,7 +73,7 @@ public class CheckersRestApplication {
       boolean externalRedisAvailable = false;
 
       if (redisHost.equals(LOCALHOST_IP) || redisHost.equals(LOCALHOST_NAME)) {
-        externalRedisAvailable = !EmbeddedRedisServer.checkExternalRedisServer(redisPort);
+        externalRedisAvailable = EmbeddedRedisServer.checkExternalRedisServer(redisPort);
       } else {
         try (redis.clients.jedis.Jedis jedis =
             new redis.clients.jedis.Jedis(redisHost, redisPort, JEDIS_CONNECT_TIMEOUT_MS)) {
