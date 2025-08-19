@@ -44,7 +44,7 @@ public class EmbeddedRedisServer {
 
         // If an external Redis already runs on the default port, don't start embedded
         try {
-            if (checkExternalRedisServer(DEFAULT_PORT)) {
+            if (!checkExternalRedisServer(DEFAULT_PORT)) {
                 currentPort = DEFAULT_PORT;
                 logger.info("Detected external Redis on port {}. Skipping embedded startup.", DEFAULT_PORT);
                 return;

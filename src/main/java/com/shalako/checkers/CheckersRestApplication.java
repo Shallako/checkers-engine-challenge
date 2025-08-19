@@ -1,6 +1,7 @@
 package com.shalako.checkers;
 
 import com.shalako.checkers.engine.GameEngine;
+import com.shalako.checkers.engine.GameRulesFactory;
 import com.shalako.checkers.persistence.GameRepository;
 import com.shalako.checkers.persistence.RedisGameRepository;
 import com.shalako.checkers.util.EmbeddedRedisServer;
@@ -72,7 +73,7 @@ public class CheckersRestApplication {
       boolean externalRedisAvailable = false;
 
       if (redisHost.equals(LOCALHOST_IP) || redisHost.equals(LOCALHOST_NAME)) {
-        externalRedisAvailable = EmbeddedRedisServer.checkExternalRedisServer(redisPort);
+        externalRedisAvailable = !EmbeddedRedisServer.checkExternalRedisServer(redisPort);
       } else {
         try (redis.clients.jedis.Jedis jedis =
             new redis.clients.jedis.Jedis(redisHost, redisPort, JEDIS_CONNECT_TIMEOUT_MS)) {
@@ -154,7 +155,7 @@ public class CheckersRestApplication {
    * Creates a GameEngine bean.
    */
   @Bean
-  public GameEngine gameEngine(GameRepository gameRepository) {
-    return new GameEngine(gameRepository);
+  public GameEngine gameEngine(GameRepository gameRepository, GameRulesFactory gameRulesFactory) {
+    return new GameEngine(gameRepository, gameRulesFactory);
   }
 }

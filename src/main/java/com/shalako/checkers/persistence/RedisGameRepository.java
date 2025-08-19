@@ -2,6 +2,7 @@ package com.shalako.checkers.persistence;
 
 import com.shalako.checkers.enums.BoardSize;
 import com.shalako.checkers.enums.GameState;
+import com.shalako.checkers.enums.GameType;
 import com.shalako.checkers.enums.PieceType;
 import com.shalako.checkers.enums.PlayerColor;
 import com.shalako.checkers.enums.PlayerType;
@@ -45,6 +46,7 @@ public class RedisGameRepository implements GameRepository {
             gameData.put("boardSize", game.getBoard().getSize().name());
             gameData.put("createdAt", game.getCreatedAt().toString());
             gameData.put("updatedAt", Instant.now().toString());
+            gameData.put("gameType", game.getGameType().name());
             
             // Store player data
             gameData.put("redPlayer:id", game.getRedPlayer().getId());
@@ -111,7 +113,8 @@ public class RedisGameRepository implements GameRepository {
                 PlayerColor.valueOf(gameData.get("currentTurn")),
                 GameState.valueOf(gameData.get("state")),
                 Instant.parse(gameData.get("createdAt")),
-                Instant.parse(gameData.get("updatedAt"))
+                Instant.parse(gameData.get("updatedAt")),
+                GameType.valueOf(gameData.getOrDefault("gameType", GameType.STANDARD_AMERICAN.name()))
             );
         }
     }
