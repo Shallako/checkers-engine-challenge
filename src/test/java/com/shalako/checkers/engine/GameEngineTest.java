@@ -4,6 +4,7 @@ import com.shalako.checkers.enums.BoardSize;
 import com.shalako.checkers.enums.GameState;
 import com.shalako.checkers.enums.PlayerColor;
 import com.shalako.checkers.model.*;
+import com.shalako.checkers.engine.rules.AmericanCheckersRules;
 import com.shalako.checkers.persistence.GameRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,9 @@ public class GameEngineTest {
     @Mock
     private GameRepository gameRepository;
 
+    @Mock
+    private GameRulesFactory gameRulesFactory;
+
     private GameEngine gameEngine;
 
     @BeforeEach
@@ -27,8 +31,9 @@ public class GameEngineTest {
         
         // Configure the mock repository to return the game that is saved
         when(gameRepository.saveGame(any(Game.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        
-        gameEngine = new GameEngine(gameRepository);
+        when(gameRulesFactory.getRules(any())).thenReturn(new AmericanCheckersRules());
+
+        gameEngine = new GameEngine(gameRepository, gameRulesFactory);
     }
 
     @Test

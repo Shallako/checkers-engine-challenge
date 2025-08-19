@@ -14,15 +14,21 @@ export interface BoardProps {
   selectableColor: PlayerColor | null; // which color user can select/move
   onSelect: (pos: Position) => void;
   highlight?: Position | null;
+  perspective?: PlayerColor;
 }
 
-export default function Board({ board, selectableColor, onSelect, highlight }: BoardProps) {
+export default function Board({ board, selectableColor, onSelect, highlight, perspective = 'RED' }: BoardProps) {
   const rows = boardSizeToRows(board.size);
   const cols = boardSizeToCols(board.size);
 
+  const rowIndexes = Array.from({ length: rows }).map((_, i) => i);
+  if (perspective === 'BLACK') {
+    rowIndexes.reverse();
+  }
+
   return (
     <div className="board" style={{ gridTemplateColumns: `repeat(${cols}, 56px)` }}>
-      {Array.from({ length: rows }).map((_, r) => (
+      {rowIndexes.map(r => (
         Array.from({ length: cols }).map((_, c) => {
           const piece = board.pieces[keyFor(r, c)];
           const dark = isDark(r, c);
@@ -32,10 +38,17 @@ export default function Board({ board, selectableColor, onSelect, highlight }: B
             <div
               key={`${r}-${c}`}
               className={`square ${dark ? 'dark' : 'light'} ${isHL ? 'highlight' : ''}`}
-              onClick={() => onSelect({ row: r, column: c })}
-              style={{ cursor: dark ? 'pointer' : 'default', opacity: dark ? 1 : 0.8 }}
+              onClick={() => {
+                let selectedRow = r;
+                if (perspective === 'BLACK') {
+                  selectedRow = rows - 1 - r;
+                }
+                const selectedPos = { row: selectedRow, column: c };
+                onSelect(selectedPos);
+              }}
+              style={{ cursor: dark ? 'pointer' : 'default' }}
             >
-              {piece && (
+              {dark && piece && (
                 <div
                   className={`piece ${piece.color === 'RED' ? 'red' : 'black'} ${piece.type === 'KING' ? 'king' : ''}`}
                   title={`${piece.color} ${piece.type}`}

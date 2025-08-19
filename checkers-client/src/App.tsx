@@ -47,8 +47,6 @@ export default function App() {
 
   const onSelect = useCallback(async (pos: Position) => {
     if (!game || !humanPlayer) return;
-    // Only allow interactions on dark squares
-    if ((pos.row + pos.column) % 2 !== 1) return;
 
     const piece = game.board.pieces[keyFor(pos.row, pos.column)];
     if (!selected) {
@@ -72,18 +70,6 @@ export default function App() {
         return;
       }
 
-      // Optimistically move
-      const optimistic = cloneBoard(game.board);
-      const fromKey = keyFor(from.row, from.column);
-      const toKey = keyFor(to.row, to.column);
-      const movingPiece = optimistic.pieces[fromKey];
-      if (!movingPiece) {
-        setSelected(null);
-        return;
-      }
-      delete optimistic.pieces[fromKey];
-      optimistic.pieces[toKey] = movingPiece;
-      setGame({ ...game, board: optimistic });
       setSelected(null);
       setMoving(true);
 
@@ -95,33 +81,11 @@ export default function App() {
       };
 
       try {
-        const afterHuman = await postMove(moveReq);
-        setGame(afterHuman);
-        lastHumanMoveRef.current = { from, to };
-        // Wait at least 3 seconds, then issue computer move if it's computer's turn and game not over
-        setTimeout(async () => {
-          try {
-            const gNow = afterHuman; // latest we have
-            if (!gNow.isGameOver && computerPlayer && gNow.currentTurn === computerPlayer.color) {
-              const compReq: MoveRequestDto = {
-                gameId: gNow.id,
-                playerId: computerPlayer.id,
-                from: null,
-                to: null,
-              };
-              const afterComputer = await postMove(compReq);
-              setGame(afterComputer);
-            }
-          } catch (e: any) {
-            setError(e.message || String(e));
-          } finally {
-            setMoving(false);
-          }
-        }, 3000);
+        const afterMove = await postMove(moveReq);
+        setGame(afterMove);
       } catch (e: any) {
-        // Revert optimistic move by refetching latest state via error? We don't poll; show error and advise.
         setError(e.message || String(e));
-        // Reload last known server state by cancelling optimism: simply getGame endpoint could be used, but requirement says not to poll. We'll revert to clearing selection and show error; user can try again or start new game.
+      } finally {
         setMoving(false);
       }
     }
@@ -153,6 +117,7 @@ export default function App() {
                 selectableColor={humanPlayer ? humanPlayer.color : null}
                 onSelect={onSelect}
                 highlight={selected}
+                perspective={humanPlayer?.color}
               />
             </div>
           </div>

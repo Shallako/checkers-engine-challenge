@@ -1,6 +1,7 @@
 package com.shalako.checkers;
 
 import com.shalako.checkers.engine.GameEngine;
+import com.shalako.checkers.engine.GameRulesFactory;
 import com.shalako.checkers.enums.BoardSize;
 import com.shalako.checkers.enums.PlayerColor;
 import com.shalako.checkers.enums.PlayerType;
@@ -235,7 +236,8 @@ public class CheckersApp {
         try (JedisPool jedisPool = new JedisPool(poolConfig, "localhost", 6379)) {
             // Create the repository and game engine
             GameRepository gameRepository = new RedisGameRepository(jedisPool);
-            GameEngine gameEngine = new GameEngine(gameRepository);
+            GameRulesFactory gameRulesFactory = new GameRulesFactory();
+            GameEngine gameEngine = new GameEngine(gameRepository, gameRulesFactory);
             
             // Create and start the application
             CheckersApp app = new CheckersApp(gameEngine);

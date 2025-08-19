@@ -12,15 +12,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import com.shalako.checkers.engine.rules.GameRules;
+
+
 /**
  * Implements the computer player logic for the checkers game.
  */
 public class ComputerPlayer {
-    private final MoveValidator moveValidator;
+    private final GameRulesFactory gameRulesFactory;
     private final Random random;
 
-    public ComputerPlayer() {
-        this.moveValidator = new MoveValidator();
+    public ComputerPlayer(GameRulesFactory gameRulesFactory) {
+        this.gameRulesFactory = gameRulesFactory;
         this.random = new Random();
     }
 
@@ -31,7 +34,8 @@ public class ComputerPlayer {
     public Move selectMove(Game game) {
         PlayerColor computerColor = game.getCurrentTurn();
         Board board = game.getBoard();
-        
+        GameRules rules = gameRulesFactory.getRules(game.getGameType());
+
         // Get all pieces of the computer's color
         List<Position> computerPieces = new ArrayList<>();
         for (Map.Entry<Position, Piece> entry : board.getPieces().entrySet()) {
@@ -39,13 +43,13 @@ public class ComputerPlayer {
                 computerPieces.add(entry.getKey());
             }
         }
-        
+
         // Collect all valid moves
         List<Move> allValidMoves = new ArrayList<>();
         for (Position position : computerPieces) {
-            allValidMoves.addAll(moveValidator.getValidMoves(board, position));
+            allValidMoves.addAll(rules.getValidMoves(board, position));
         }
-        
+
         if (allValidMoves.isEmpty()) {
             return null;
         }

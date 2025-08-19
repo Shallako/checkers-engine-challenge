@@ -1,6 +1,7 @@
 package com.shalako.checkers;
 
 import com.shalako.checkers.engine.GameEngine;
+import com.shalako.checkers.engine.GameRulesFactory;
 import com.shalako.checkers.persistence.GameRepository;
 import com.shalako.checkers.persistence.RedisGameRepository;
 import com.shalako.checkers.util.EmbeddedRedisServer;
@@ -154,7 +155,7 @@ public class CheckersRestApplication {
    * Creates a GameEngine bean.
    */
   @Bean
-  public GameEngine gameEngine(GameRepository gameRepository) {
-    return new GameEngine(gameRepository);
+  public GameEngine gameEngine(GameRepository gameRepository, GameRulesFactory gameRulesFactory) {
+    return new GameEngine(gameRepository, gameRulesFactory);
   }
 }
