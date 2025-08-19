@@ -26,8 +26,8 @@ public class InternationalDraughtsRules implements GameRules {
     @Override
     public Move validateMove(Game game, MoveRequest moveRequest) {
         log.info("[VALIDATE MOVE REQUEST] gameId={}, playerId={}, from={}, to={}, currentTurn={}",
-                moveRequest.getGameId(), moveRequest.getPlayerId(),
-                moveRequest.getFrom(), moveRequest.getTo(), game.getCurrentTurn());
+            moveRequest.getGameId(), moveRequest.getPlayerId(),
+            moveRequest.getFrom(), moveRequest.getTo(), game.getCurrentTurn());
 
         Position from = moveRequest.getFrom();
         Position to = moveRequest.getTo();
@@ -43,16 +43,16 @@ public class InternationalDraughtsRules implements GameRules {
 
         if (!allPossibleJumps.isEmpty()) {
             int maxCaptures = allPossibleJumps.stream()
-                    .max(Comparator.comparing(m -> m.getCapturedPieces().size()))
-                    .get()
-                    .getCapturedPieces().size();
+                .max(Comparator.comparing(m -> m.getCapturedPieces().size()))
+                .get()
+                .getCapturedPieces().size();
 
             List<Move> maxJumps = allPossibleJumps.stream()
-                    .filter(m -> m.getCapturedPieces().size() == maxCaptures)
-                    .collect(Collectors.toList());
+                .filter(m -> m.getCapturedPieces().size() == maxCaptures)
+                .collect(Collectors.toList());
 
             for (Move jump : maxJumps) {
-                if (jump.getFrom().equals(from) && jump.getTo().equals(to)) {
+                if (jump.getFrom().equals(from) && jump.getPath().size() > 1 && jump.getPath().get(1).equals(to)) {
                     return jump;
                 }
             }
@@ -109,7 +109,7 @@ public class InternationalDraughtsRules implements GameRules {
         List<Move> allJumps = new ArrayList<>();
         for (Map.Entry<Position, Piece> entry : board.getPieces().entrySet()) {
             if (entry.getValue().getColor() == color) {
-                allJumps.addAll(getValidJumps(board, entry.getKey(), entry.getValue(), new ArrayList<>()));
+                allJumps.addAll(getValidJumps(board, entry.getKey(), entry.getValue()));
             }
         }
         return allJumps;
@@ -141,18 +141,17 @@ public class InternationalDraughtsRules implements GameRules {
         return moves;
     }
 
-    private List<Move> getValidJumps(Board board, Position startPos, Piece piece, List<Position> capturedSoFar) {
+    private List<Move> getValidJumps(Board board, Position startPos, Piece piece) {
         List<Move> jumps = new ArrayList<>();
-        // Use a stack for iterative deepening search
         Stack<JumpState> stack = new Stack<>();
-        stack.push(new JumpState(startPos, board, capturedSoFar));
+        stack.push(new JumpState(startPos, board, new ArrayList<>(), Collections.singletonList(startPos)));
 
         while (!stack.isEmpty()) {
             JumpState currentState = stack.pop();
             boolean foundContinuation = false;
 
             for (int[] dir : getMovementDirections(piece, true)) {
-                Position capturePos = findCapture(currentState.board, currentState.pos, dir, piece, currentState.captured);
+                Position capturePos = findCapture(currentState.board, currentState.path.get(currentState.path.size() - 1), dir, piece, currentState.captured);
                 if (capturePos == null) continue;
 
                 Position landingPos = capturePos.offset(dir[0], dir[1]);
@@ -160,9 +159,12 @@ public class InternationalDraughtsRules implements GameRules {
                     List<Position> nextCaptured = new ArrayList<>(currentState.captured);
                     nextCaptured.add(capturePos);
 
-                    Board nextBoard = createBoardAfterJump(currentState.board, currentState.pos, landingPos, capturePos);
+                    List<Position> nextPath = new ArrayList<>(currentState.path);
+                    nextPath.add(landingPos);
 
-                    stack.push(new JumpState(landingPos, nextBoard, nextCaptured));
+                    Board nextBoard = createBoardAfterJump(currentState.board, currentState.path.get(currentState.path.size() - 1), landingPos, capturePos);
+
+                    stack.push(new JumpState(landingPos, nextBoard, nextCaptured, nextPath));
                     foundContinuation = true;
 
                     if (piece.getType() != PieceType.KING) break;
@@ -171,7 +173,12 @@ public class InternationalDraughtsRules implements GameRules {
             }
 
             if (!foundContinuation && !currentState.captured.isEmpty()) {
-                jumps.add(Move.MoveFactory.createMultiJumpMove(startPos, currentState.pos, currentState.captured));
+                boolean promotion = isPromotionMove(board, currentState.path.get(currentState.path.size() - 1), piece);
+                if (promotion) {
+                    jumps.add(Move.MoveFactory.createMultiJumpPromotionMove(currentState.path, currentState.captured));
+                } else {
+                    jumps.add(Move.MoveFactory.createMultiJumpMove(currentState.path, currentState.captured));
+                }
             }
         }
         return jumps;
@@ -181,11 +188,13 @@ public class InternationalDraughtsRules implements GameRules {
         final Position pos;
         final Board board;
         final List<Position> captured;
+        final List<Position> path;
 
-        JumpState(Position pos, Board board, List<Position> captured) {
+        JumpState(Position pos, Board board, List<Position> captured, List<Position> path) {
             this.pos = pos;
             this.board = board;
             this.captured = captured;
+            this.path = path;
         }
     }
 
